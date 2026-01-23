@@ -1,105 +1,132 @@
 import { SectionContent } from "./dataLoader";
+import stringSimilarity from 'string-similarity';
 
 export interface DiffRow {
-    key: string; // Unique key: categoryId::sectionId
+    key: string;
     sectionId: string;
     categoryId: string;
     categoryTitle: string;
     left?: SectionContent;
     right?: SectionContent;
     status: 'MATCH' | 'MODIFIED' | 'ADD' | 'REMOVE';
+    aiSummary?: string;
+    keyChange?: string;
 }
 
+// --- Alignment Logic ---
 export const alignSections = (leftSections: SectionContent[], rightSections: SectionContent[]): DiffRow[] => {
-    // Helper to generate key
-    const genKey = (catId: string, secId: string) => `${catId}::${secId}`;
 
-    const mapLeft = new Map<string, SectionContent>();
-    leftSections.forEach(s => {
-        const catId = s.category_id || 'general';
-        mapLeft.set(genKey(catId, s.id), s);
-    });
+    // 1. Group by Category
+    const categories = new Set([...leftSections.map(s => s.category_id), ...rightSections.map(s => s.category_id)]);
+    const resultRows: DiffRow[] = [];
+    const THRESHOLD = 0.55; // Increase threshold to avoid matching "boilerplate" (King has power...)
 
-    const mapRight = new Map<string, SectionContent>();
-    rightSections.forEach(s => {
-        const catId = s.category_id || 'general';
-        mapRight.set(genKey(catId, s.id), s);
-    });
+    // Process each category independently
+    categories.forEach(catId => {
+        // Safe check for undefined category
+        const cId = catId || 'general';
 
-    // Get all unique Keys
-    const allKeys = new Set([...mapLeft.keys(), ...mapRight.keys()]);
+        const leftPool = leftSections.filter(s => (s.category_id || 'general') === cId);
+        const rightPool = rightSections.filter(s => (s.category_id || 'general') === cId);
 
-    // Sort logic: We want to sort by Category Order first, then Section Number.
-    // However, we don't have explicit category order here unless we infer it from the input arrays.
-    // Let's create a Category Order Map based on appearance in Left then Right.
-    const catOrder = new Map<string, number>();
-    let orderCounter = 0;
+        // Get Metadata (Title, Summary) from first available item
+        const metaSource = leftPool[0] || rightPool[0];
+        const categoryTitle = metaSource?.chapter_name || 'Unknown';
+        const aiSummary = metaSource?.ai_summary;
+        const keyChange = metaSource?.key_change;
 
-    [...leftSections, ...rightSections].forEach(s => {
-        const catId = s.category_id || 'general';
-        if (!catOrder.has(catId)) {
-            catOrder.set(catId, orderCounter++);
-        }
-    });
+        // Similarity Matrix: [LeftIndex, RightIndex, Score]
+        const matches: { l: number, r: number, score: number }[] = [];
 
-    const sortedKeys = Array.from(allKeys).sort((a, b) => {
-        const [catA, secA] = a.split('::');
-        const [catB, secB] = b.split('::');
-
-        // 1. Compare Category Order
-        const orderA = catOrder.get(catA) ?? 9999;
-        const orderB = catOrder.get(catB) ?? 9999;
-
-        if (orderA !== orderB) {
-            return orderA - orderB;
-        }
-
-        // 2. Compare Section Number
-        const numA = parseFloat(secA);
-        const numB = parseFloat(secB);
-        if (!isNaN(numA) && !isNaN(numB)) {
-            return numA - numB;
-        }
-        return secA.localeCompare(secB);
-    });
-
-    const rows: DiffRow[] = [];
-
-    sortedKeys.forEach(key => {
-        const left = mapLeft.get(key);
-        const right = mapRight.get(key);
-
-        // Extract Metadata from whichever side exists
-        const item = left || right!;
-        const categoryId = item.category_id || 'general';
-        // We might want a better way to get the display title if it differs, but for now take the one we have.
-        const categoryTitle = item.chapter_name || 'บททั่วไป';
-        const sectionId = item.id;
-
-        let status: DiffRow['status'] = 'MATCH';
-
-        if (left && right) {
-            if (left.content.trim() !== right.content.trim()) {
-                status = 'MODIFIED';
-            } else {
-                status = 'MATCH';
-            }
-        } else if (left && !right) {
-            status = 'REMOVE';
-        } else if (!left && right) {
-            status = 'ADD';
-        }
-
-        rows.push({
-            key,
-            sectionId,
-            categoryId,
-            categoryTitle,
-            left,
-            right,
-            status
+        leftPool.forEach((l, lIdx) => {
+            rightPool.forEach((r, rIdx) => {
+                // Use the library to compare text
+                const score = stringSimilarity.compareTwoStrings(l.content, r.content);
+                if (score > THRESHOLD) {
+                    matches.push({ l: lIdx, r: rIdx, score });
+                }
+            });
         });
+
+        // Sort matches by Score descending
+        matches.sort((a, b) => b.score - a.score);
+
+        const usedLeft = new Set<number>();
+        const usedRight = new Set<number>();
+        const categoryRows: DiffRow[] = [];
+
+        // Greedy Matching
+        matches.forEach(m => {
+            if (!usedLeft.has(m.l) && !usedRight.has(m.r)) {
+                // Determine Status based on Score
+                // If extremely high score (e.g. > 0.85), it's a MATCH.
+                // If reasonably high (0.35 - 0.85), it's MODIFIED.
+                const status = m.score > 0.85 ? 'MATCH' : 'MODIFIED';
+
+                categoryRows.push({
+                    key: `${cId}::${leftPool[m.l].id}::${rightPool[m.r].id}`,
+                    sectionId: `${leftPool[m.l].id}`,
+                    categoryId: cId,
+                    categoryTitle,
+                    left: leftPool[m.l],
+                    right: rightPool[m.r],
+                    status: status,
+                    aiSummary,
+                    keyChange
+                });
+                usedLeft.add(m.l);
+                usedRight.add(m.r);
+            }
+        });
+
+        // Handle Unmatched Left (REMOVE)
+        leftPool.forEach((l, idx) => {
+            if (!usedLeft.has(idx)) {
+                categoryRows.push({
+                    key: `${cId}::${l.id}::REMOVE`,
+                    sectionId: l.id,
+                    categoryId: cId,
+                    categoryTitle,
+                    left: l,
+                    right: undefined,
+                    status: 'REMOVE',
+                    aiSummary,
+                    keyChange
+                });
+            }
+        });
+
+        // Handle Unmatched Right (ADD)
+        rightPool.forEach((r, idx) => {
+            if (!usedRight.has(idx)) {
+                categoryRows.push({
+                    key: `${cId}::ADD::${r.id}`,
+                    sectionId: r.id,
+                    categoryId: cId,
+                    categoryTitle,
+                    left: undefined,
+                    right: r,
+                    status: 'ADD',
+                    aiSummary,
+                    keyChange
+                });
+            }
+        });
+
+        // Sort Category Rows for Readability
+        // Primary Sort: Left ID (Numeric)
+        // If Left is missing (ADD row), insert it based on its Right ID relative to the flow
+        categoryRows.sort((a, b) => {
+            const getVal = (row: DiffRow) => {
+                if (row.left) return parseFloat(row.left.id) || 9999;
+                if (row.right) return parseFloat(row.right.id) || 9999;
+                return 9999;
+            };
+            return getVal(a) - getVal(b);
+        });
+
+        resultRows.push(...categoryRows);
     });
 
-    return rows;
+    return resultRows;
 };

@@ -30,6 +30,8 @@ export interface SectionContent {
     status?: string;
     similarity?: number;
     pageNumber?: number; // ✅ เพิ่ม Page Number
+    ai_summary?: string;
+    key_change?: string;
 }
 
 export interface ConstitutionContent {
@@ -73,7 +75,9 @@ const transformRichData = (richData: any[], id: string, name: string) => {
                         category_id: cat.category_id,
                         status: sec.status,
                         similarity: sec.similarity,
-                        pageNumber: pageNum
+                        pageNumber: pageNum,
+                        ai_summary: cat.ai_summary,
+                        key_change: cat.key_change
                     });
                 });
             }
