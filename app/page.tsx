@@ -73,11 +73,11 @@ export default function SemanticDiffPage() {
       </header>
 
       {/* Main Workspace */}
-      <div className="flex-1 p-4 overflow-hidden flex flex-col gap-4">
+      <div className="flex-1 overflow-hidden flex flex-col">
 
-        {/* 1. DNA Bar (ย่อให้เล็กลงหน่อย) */}
+        {/* 1. DNA Bar (Fixed Height) */}
         {leftData.meta && rightData.meta && (
-          <div className="shrink-0 h-24">
+          <div className="shrink-0">
             <ConceptDiff
               leftMeta={leftData.meta}
               rightMeta={rightData.meta}

@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import ContentColumn from './ContentColumn';
+import DiffViewer from './DiffViewer';
 import { ConstitutionContent, ConstitutionMeta } from '@/utils/dataLoader';
 import { ChevronLeft, ChevronRight, FileText, X } from 'lucide-react';
 
@@ -121,30 +122,14 @@ export default function LiquidPDFLayout({ leftData, rightData, leftMeta, rightMe
             )}
 
             {/* === CENTER CONTENT AREA (Flexible Width) === */}
-            <div className="flex-1 flex min-w-0 bg-white divide-x divide-slate-200">
-
-                {/* Left Content */}
-                <div className="flex-1 h-full overflow-hidden bg-slate-50 relative">
-                    <div className={`absolute top-0 left-0 w-1 h-full bg-blue-500 z-10 opacity-50`} />
-                    <ContentColumn
-                        content={leftData}
-                        meta={leftMeta}
-                        onJumpToPage={(p) => handleJump(p, 'left')}
-                        themeColor="blue"
+            <div className="flex-1 flex min-w-0 bg-white overflow-hidden relative">
+                <div className="flex-1 overflow-y-auto custom-scrollbar h-full">
+                    <DiffViewer
+                        leftSections={leftData.sections}
+                        rightSections={rightData.sections}
+                        onJumpToPage={handleJump}
                     />
                 </div>
-
-                {/* Right Content */}
-                <div className="flex-1 h-full overflow-hidden bg-white relative">
-                    <div className={`absolute top-0 right-0 w-1 h-full bg-emerald-500 z-10 opacity-50`} />
-                    <ContentColumn
-                        content={rightData}
-                        meta={rightMeta}
-                        onJumpToPage={(p) => handleJump(p, 'right')}
-                        themeColor="emerald"
-                    />
-                </div>
-
             </div>
 
             {/* 👉 Toggle Button Right (ลอยอยู่มุมขวาล่าง) */}

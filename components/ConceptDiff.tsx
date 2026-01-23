@@ -1,6 +1,6 @@
 'use client';
 import React, { useMemo } from 'react';
-import { CategoryOverview, ConstitutionMeta, Page } from '@/utils/dataLoader';
+import { CategoryOverview, ConstitutionMeta } from '@/utils/dataLoader';
 
 interface Props {
     leftMeta: ConstitutionMeta;
@@ -31,16 +31,21 @@ export default function ConceptDiff({ leftMeta, rightMeta, categories, onCategor
     const getCat = (id: string) => categories.find(c => c.id === id);
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6 text-center">
-                🧬 Constitutional DNA Analysis (Structural Diff)
-            </h3>
+        <div className="w-full bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6 shadow-sm z-20 relative">
 
-            <div className="flex gap-8">
+            {/* Legend / Title */}
+            <div className="shrink-0 flex flex-col justify-center">
+                <div className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Structure Analysis</div>
+                <div className="flex gap-2 text-[10px] text-gray-500">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> New</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400"></span> Removed</span>
+                </div>
+            </div>
+
+            <div className="flex-1 flex gap-4 items-center">
                 {/* --- LEFT DNA BAR --- */}
-                <div className="flex-1 flex flex-col gap-1">
-                    <div className="text-center font-bold mb-2">{leftMeta.name}</div>
-                    <div className="h-12 w-full flex rounded-lg overflow-hidden border border-gray-300 shadow-inner">
+                <div className="flex-1 relative group/bar">
+                    <div className="h-6 w-full flex rounded overflow-hidden bg-gray-100 relative">
                         {categories.map(cat => {
                             const width = leftWeights[cat.id] || 0;
                             if (width === 0) return null;
@@ -48,12 +53,11 @@ export default function ConceptDiff({ leftMeta, rightMeta, categories, onCategor
                                 <div
                                     key={cat.id}
                                     style={{ width: `${width}%`, backgroundColor: cat.color }}
-                                    className="h-full hover:opacity-80 cursor-pointer transition-all relative group"
+                                    className="h-full hover:brightness-110 cursor-pointer transition-all relative group"
                                     onClick={() => onCategoryClick(cat.id)}
-                                    title={`${cat.title}: ${width.toFixed(1)}%`}
                                 >
-                                    {/* Tooltip on Hover */}
-                                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none">
+                                    {/* Tooltip */}
+                                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-30 pointer-events-none shadow-lg">
                                         {cat.title} ({width.toFixed(1)}%)
                                     </div>
                                 </div>
@@ -62,33 +66,12 @@ export default function ConceptDiff({ leftMeta, rightMeta, categories, onCategor
                     </div>
                 </div>
 
-                {/* --- DIFF METRICS (Middle) --- */}
-                <div className="w-48 flex flex-col gap-2 text-xs">
-                    <div className="text-center text-gray-400 font-mono mb-1">DIFF STATS</div>
-                    {categories.map(cat => {
-                        const l = leftWeights[cat.id] || 0;
-                        const r = rightWeights[cat.id] || 0;
-                        const diff = r - l;
-                        if (Math.abs(diff) < 1) return null; // ไม่แสดงถ้าเปลี่ยนน้อยกว่า 1%
-
-                        return (
-                            <div key={cat.id} className="flex items-center justify-between group cursor-pointer" onClick={() => onCategoryClick(cat.id)}>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full" style={{ background: cat.color }} />
-                                    <span className="text-gray-600 truncate max-w-[80px]">{cat.title}</span>
-                                </div>
-                                <div className={`font-mono font-bold ${diff > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                    {diff > 0 ? '+' : ''}{diff.toFixed(1)}%
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                {/* --- VS / Stats --- */}
+                <div className="text-[10px] font-mono text-gray-400">VS</div>
 
                 {/* --- RIGHT DNA BAR --- */}
-                <div className="flex-1 flex flex-col gap-1">
-                    <div className="text-center font-bold mb-2">{rightMeta.name}</div>
-                    <div className="h-12 w-full flex rounded-lg overflow-hidden border border-gray-300 shadow-inner">
+                <div className="flex-1 relative group/bar">
+                    <div className="h-6 w-full flex rounded overflow-hidden bg-gray-100 relative">
                         {categories.map(cat => {
                             const width = rightWeights[cat.id] || 0;
                             if (width === 0) return null;
@@ -96,11 +79,11 @@ export default function ConceptDiff({ leftMeta, rightMeta, categories, onCategor
                                 <div
                                     key={cat.id}
                                     style={{ width: `${width}%`, backgroundColor: cat.color }}
-                                    className="h-full hover:opacity-80 cursor-pointer transition-all relative group"
+                                    className="h-full hover:brightness-110 cursor-pointer transition-all relative group"
                                     onClick={() => onCategoryClick(cat.id)}
-                                    title={`${cat.title}: ${width.toFixed(1)}%`}
                                 >
-                                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none">
+                                    {/* Tooltip */}
+                                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-30 pointer-events-none shadow-lg">
                                         {cat.title} ({width.toFixed(1)}%)
                                     </div>
                                 </div>
