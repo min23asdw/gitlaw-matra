@@ -2,7 +2,6 @@
 
 import React, { useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import ContentColumn from './ContentColumn';
 import DiffViewer from './DiffViewer';
 import { ConstitutionContent, ConstitutionMeta } from '@/utils/dataLoader';
 import { ChevronLeft, ChevronRight, FileText, X } from 'lucide-react';

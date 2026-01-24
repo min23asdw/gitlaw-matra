@@ -9,25 +9,76 @@ interface Props {
     onJumpToPage?: (page: number, side: 'left' | 'right') => void;
 }
 
+type DisplayRow = DiffRow & { isCompact?: boolean };
+
 export default function DiffViewer({ leftSections, rightSections, onJumpToPage }: Props) {
-    const rows = useMemo(() => alignSections(leftSections, rightSections), [leftSections, rightSections]);
+    // 1. คำนวณ Diff ตามปกติ
+    const rawRows = useMemo(() => alignSections(leftSections, rightSections), [leftSections, rightSections]);
+
+    // 2. Logic จัดระเบียบแถวใหม่ (Zip Compact)
+    const displayRows = useMemo(() => {
+        const result: DisplayRow[] = [];
+        let bufferRemoves: DiffRow[] = [];
+        let bufferAdds: DiffRow[] = [];
+
+        // ฟังก์ชันช่วยเคลียร์ Buffer (จับคู่ Remove/Add ที่สะสมไว้)
+        const flushBuffers = () => {
+            const maxLen = Math.max(bufferRemoves.length, bufferAdds.length);
+            for (let i = 0; i < maxLen; i++) {
+                const rem = bufferRemoves[i];
+                const add = bufferAdds[i];
+
+                // สร้าง Row ใหม่ที่มัดรวมกัน
+                result.push({
+                    key: `compact-${rem?.key || ''}-${add?.key || ''}`,
+                    // ถ้ามีทั้งคู่ ให้ใช้ ID ของฝั่งซ้ายเป็นหลัก หรือแล้วแต่ Logic
+                    status: 'COMPACT' as any, // Status พิเศษ
+                    isCompact: true,
+                    left: rem?.left || undefined,
+                    right: add?.right || undefined,
+                    // ข้อมูล Category (หยิบจากตัวที่มี)
+                    categoryId: (rem || add).categoryId,
+                    categoryTitle: (rem || add).categoryTitle,
+                    sectionId: (rem || add).sectionId
+                });
+            }
+            bufferRemoves = [];
+            bufferAdds = [];
+        };
+
+        rawRows.forEach(row => {
+            if (row.status === 'MODIFIED' || row.status === 'MATCH') {
+                // ถ้าเจอตัวที่ Match/Modify ให้เคลียร์ของเก่าที่ค้างใน Buffer ก่อน
+                flushBuffers();
+                result.push(row);
+            } else if (row.status === 'REMOVE') {
+                bufferRemoves.push(row);
+            } else if (row.status === 'ADD') {
+                bufferAdds.push(row);
+            }
+        });
+
+        // เคลียร์เศษที่เหลือตอนจบ Loop
+        flushBuffers();
+
+        return result;
+    }, [rawRows]);
 
     return (
         <div className="w-full font-sans text-sm pb-20 bg-slate-50/50">
-            {/* Header Column */}
             <div className="grid grid-cols-2 gap-4 sticky top-0 bg-white/95 backdrop-blur z-10 border-b border-slate-200 shadow-sm px-4 py-2 font-bold text-slate-500 uppercase text-xs tracking-wider">
                 <div className="text-center">Reference Document</div>
                 <div className="text-center">Comparison Document</div>
             </div>
 
-            <div className="px-4 py-4 space-y-2">
-                {rows.map((row, index) => {
-                    const prevRow = rows[index - 1];
+            <div className="px-4 py-4 space-y-1">
+                {displayRows.map((row, index) => {
+                    const prevRow = displayRows[index - 1];
                     const isNewCategory = !prevRow || prevRow.categoryId !== row.categoryId;
 
                     return (
                         <React.Fragment key={row.key}>
-                            {/* Category Header with Rich Data */}
+                            {/* Category Separator */}
                             {isNewCategory && (
                                 <div className="col-span-2 pt-8 pb-4">
                                     <div className="flex items-center gap-4 mb-4">
@@ -38,7 +89,6 @@ export default function DiffViewer({ leftSections, rightSections, onJumpToPage }
                                         <div className="h-[1px] flex-1 bg-slate-200"></div>
                                     </div>
 
-                                    {/* Rich Data Block */}
                                     {(row.aiSummary || row.keyChange) && (
                                         <div className="mx-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                                             {row.aiSummary && (
@@ -63,95 +113,95 @@ export default function DiffViewer({ leftSections, rightSections, onJumpToPage }
                 })}
             </div>
 
-            {rows.length === 0 && (
+            {displayRows.length === 0 && (
                 <div className="p-10 text-center text-slate-400">No content to compare.</div>
             )}
         </div>
     );
 }
 
-function DiffRowItem({ row, onJumpToPage }: { row: DiffRow, onJumpToPage?: (p: number, s: 'left' | 'right') => void }) {
-    const { status, left, right } = row;
+function DiffRowItem({ row, onJumpToPage }: { row: DisplayRow, onJumpToPage?: (p: number, s: 'left' | 'right') => void }) { // เปลี่ยน Type เป็น DisplayRow
+    const { status, left, right, isCompact } = row;
 
-    // Compact Card Styles
-    const cardBase = "bg-white p-3 rounded-lg border border-slate-200 shadow-sm transition-all hover:shadow-md h-full flex flex-col group/card";
+    const cardBase = "rounded-lg border shadow-sm transition-all hover:shadow-md h-full flex flex-col group/card p-3 relative";
+    const emptyState = "h-full border-none bg-transparent invisible";
 
-    // Status Styles
-    let containerClass = "grid grid-cols-2 gap-4 items-stretch group";
+    // --- Color Logic ใหม่ ---
+    // ถ้าเป็น Compact: 
+    //   - ฝั่งซ้าย (ถ้ามี) เป็น REMOVE เสมอ -> สีแดง
+    //   - ฝั่งขวา (ถ้ามี) เป็น ADD เสมอ -> สีเขียว
+    // ถ้าไม่ใช่ Compact: ใช้ Logic เดิม
+
+    const leftStyle = (status === 'REMOVE' || (isCompact && left))
+        ? 'bg-red-50 border-red-200'
+        : 'bg-white border-slate-200';
+
+    const rightStyle = (status === 'ADD' || (isCompact && right))
+        ? 'bg-emerald-50 border-emerald-200'
+        : status === 'MODIFIED'
+            ? 'bg-amber-50 border-amber-200'
+            : 'bg-white border-slate-200';
+
+    const PdfButton = ({ pageNumber, side }: { pageNumber: number, side: 'left' | 'right' }) => (
+        <button
+            onClick={(e) => {
+                e.stopPropagation();
+                onJumpToPage?.(pageNumber, side);
+            }}
+            // ใช้ float-right เพื่อให้ชิดขวา และ ml-2 เพื่อเว้นระยะจากตัวอักษรถ้ามันมาชน
+            className="float-right ml-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-slate-200 bg-white text-[10px] font-medium text-slate-400 shadow-sm transition-all hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 cursor-pointer select-none"
+            title={`Open PDF at page ${pageNumber}`}
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clipRule="evenodd" />
+            </svg>
+            PDF
+        </button>
+    );
 
     return (
-        <div className={containerClass}>
-
+        <div className="grid grid-cols-2 gap-4 items-start group"> {/* items-start สำคัญมาก! */}
             {/* LEFT SIDE */}
             <div className="relative">
                 {left ? (
-                    <div className={`${cardBase} ${status === 'REMOVE' ? 'bg-red-50/30 border-red-200' : ''}`}>
-                        <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-slate-50">
-                            <div className="flex items-center gap-2">
-                                <span className="font-mono font-bold text-slate-600 text-xs bg-slate-100 px-1.5 rounded">
-                                    § {left.id}
-                                </span>
-                            </div>
-                            {left.pageNumber && (
-                                <button
-                                    onClick={() => onJumpToPage?.(left.pageNumber!, 'left')}
-                                    className="opacity-0 group-hover/card:opacity-100 text-[9px] font-medium text-slate-400 hover:text-blue-600 px-1 rounded transition-all"
-                                >
-                                    PDF p.{left.pageNumber}
-                                </button>
-                            )}
-                        </div>
+                    <div className={`${cardBase} ${leftStyle}`}>
+                        {/* ... Content ... */}
+                        <div className="flex-1 font-thai-loop text-xs text-slate-600 leading-relaxed text-justify block">
+                            {left.pageNumber && <PdfButton pageNumber={left.pageNumber} side="left" />}
+                            <span className="font-mono font-bold text-slate-400 mr-2 select-none">
+                                § {left.id}
+                            </span>
+                            {/* เพิ่ม Badge บอกสถานะ ถ้าเป็น Compact mode */}
+                            {isCompact && <span className="text-[9px] text-red-500 font-bold bg-white/50 px-1 rounded mr-1">REMOVED</span>}
 
-                        <div className="flex-1 font-thai-loop text-sm text-slate-800 leading-6 text-justify">
                             {left.content}
                         </div>
-
-                        {status === 'REMOVE' && (
-                            <div className="mt-2 pt-1 border-t border-red-100 flex justify-end">
-                                <span className="text-[9px] font-bold text-red-500">REMOVED</span>
-                            </div>
-                        )}
                     </div>
                 ) : (
-                    <div className="h-full rounded-lg border border-dashed border-slate-200 flex items-center justify-center min-h-[40px] bg-slate-50/50">
-                        <span className="text-slate-300 text-[10px]">Empty</span>
-                    </div>
+                    <div className={emptyState} aria-hidden="true" />
                 )}
             </div>
 
             {/* RIGHT SIDE */}
             <div className="relative">
                 {right ? (
-                    <div className={`${cardBase} ${status === 'ADD' ? 'bg-emerald-50/30 border-emerald-200' : ''} ${status === 'MODIFIED' ? 'bg-amber-50/20 border-amber-200' : ''}`}>
-                        <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-slate-50">
-                            <div className="flex items-center gap-2">
-                                <span className="font-mono font-bold text-slate-600 text-xs bg-slate-100 px-1.5 rounded">
-                                    § {right.id}
-                                </span>
-                                {status === 'ADD' && <span className="text-[9px] font-bold text-emerald-600 bg-emerald-100 px-1 rounded">NEW</span>}
-                                {status === 'MODIFIED' && <span className="text-[9px] font-bold text-amber-600 bg-amber-100 px-1 rounded">MOD</span>}
-                            </div>
-                            {right.pageNumber && (
-                                <button
-                                    onClick={() => onJumpToPage?.(right.pageNumber!, 'right')}
-                                    className="opacity-0 group-hover/card:opacity-100 text-[9px] font-medium text-slate-400 hover:text-blue-600 px-1 rounded transition-all"
-                                >
-                                    PDF p.{right.pageNumber}
-                                </button>
-                            )}
-                        </div>
+                    <div className={`${cardBase} ${rightStyle}`}>
+                        {/* ... Content ... */}
+                        <div className="flex-1 font-thai-loop text-xs text-slate-600 leading-relaxed text-justify block">
+                            {right.pageNumber && <PdfButton pageNumber={right.pageNumber} side="right" />}
+                            <span className="font-mono font-bold text-slate-400 mr-2 select-none">
+                                § {right.id}
+                            </span>
+                            {/* เพิ่ม Badge บอกสถานะ ถ้าเป็น Compact mode */}
+                            {isCompact && <span className="text-[9px] text-emerald-600 font-bold bg-white/50 px-1 rounded mr-1">NEW</span>}
 
-                        <div className="flex-1 font-thai-loop text-sm text-slate-800 leading-6 text-justify">
                             {right.content}
                         </div>
                     </div>
                 ) : (
-                    <div className="h-full rounded-lg border border-dashed border-slate-200 flex items-center justify-center min-h-[40px] bg-slate-50/50">
-                        <span className="text-slate-300 text-[10px]">Empty</span>
-                    </div>
+                    <div className={emptyState} aria-hidden="true" />
                 )}
             </div>
-
         </div>
     );
 }
