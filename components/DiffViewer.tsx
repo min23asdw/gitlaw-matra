@@ -7,48 +7,40 @@ interface Props {
     leftSections: SectionContent[];
     rightSections: SectionContent[];
     onJumpToPage?: (page: number, side: 'left' | 'right') => void;
+    forceMobileMode?: boolean;
 }
 
 type DisplayRow = DiffRow & { isCompact?: boolean };
 
-export default function DiffViewer({ leftSections, rightSections, onJumpToPage }: Props) {
-    // 1. คำนวณ Diff ตามปกติ
-    const rawRows = useMemo(() => alignSections(leftSections, rightSections), [leftSections, rightSections]);
+function DiffViewerComponent({ leftSections, rightSections, onJumpToPage, forceMobileMode = false }: Props) {
 
-    // 2. Logic จัดระเบียบแถวใหม่ (Zip Compact)
+    const rawRows = useMemo(() => alignSections(leftSections, rightSections), [leftSections, rightSections]);
     const displayRows = useMemo(() => {
         const result: DisplayRow[] = [];
         let bufferRemoves: DiffRow[] = [];
         let bufferAdds: DiffRow[] = [];
-
-        // ฟังก์ชันช่วยเคลียร์ Buffer (จับคู่ Remove/Add ที่สะสมไว้)
         const flushBuffers = () => {
             const maxLen = Math.max(bufferRemoves.length, bufferAdds.length);
             for (let i = 0; i < maxLen; i++) {
                 const rem = bufferRemoves[i];
                 const add = bufferAdds[i];
-
-                // สร้าง Row ใหม่ที่มัดรวมกัน
+                const mainSource = rem || add;
                 result.push({
-                    key: `compact-${rem?.key || ''}-${add?.key || ''}`,
-                    // ถ้ามีทั้งคู่ ให้ใช้ ID ของฝั่งซ้ายเป็นหลัก หรือแล้วแต่ Logic
-                    status: 'COMPACT' as any, // Status พิเศษ
+                    key: `compact-${rem?.key || 'x'}-${add?.key || 'y'}`,
+                    status: 'COMPACT' as any,
                     isCompact: true,
                     left: rem?.left || undefined,
                     right: add?.right || undefined,
-                    // ข้อมูล Category (หยิบจากตัวที่มี)
-                    categoryId: (rem || add).categoryId,
-                    categoryTitle: (rem || add).categoryTitle,
-                    sectionId: (rem || add).sectionId
+                    categoryId: mainSource.categoryId,
+                    categoryTitle: mainSource.categoryTitle,
+                    sectionId: mainSource.sectionId
                 });
             }
             bufferRemoves = [];
             bufferAdds = [];
         };
-
         rawRows.forEach(row => {
             if (row.status === 'MODIFIED' || row.status === 'MATCH') {
-                // ถ้าเจอตัวที่ Match/Modify ให้เคลียร์ของเก่าที่ค้างใน Buffer ก่อน
                 flushBuffers();
                 result.push(row);
             } else if (row.status === 'REMOVE') {
@@ -57,16 +49,13 @@ export default function DiffViewer({ leftSections, rightSections, onJumpToPage }
                 bufferAdds.push(row);
             }
         });
-
-        // เคลียร์เศษที่เหลือตอนจบ Loop
         flushBuffers();
-
         return result;
     }, [rawRows]);
 
     return (
         <div className="w-full font-sans text-sm pb-20 bg-slate-50/50">
-            <div className="grid grid-cols-2 gap-4 sticky top-0 bg-white/95 backdrop-blur z-10 border-b border-slate-200 shadow-sm px-4 py-2 font-bold text-slate-500 uppercase text-xs tracking-wider">
+            <div className={`${forceMobileMode ? 'hidden' : 'hidden md:grid'} grid-cols-2 gap-4 sticky top-0 bg-white/95 backdrop-blur z-10 border-b border-slate-200 shadow-sm px-4 py-2 font-bold text-slate-500 uppercase text-xs tracking-wider`}>
                 <div className="text-center">Reference Document</div>
                 <div className="text-center">Comparison Document</div>
             </div>
@@ -78,69 +67,39 @@ export default function DiffViewer({ leftSections, rightSections, onJumpToPage }
 
                     return (
                         <React.Fragment key={row.key}>
-                            {/* Category Separator */}
                             {isNewCategory && (
-                                <div className="col-span-2 pt-8 pb-4">
+                                <div className={`${forceMobileMode ? 'col-span-1' : 'md:col-span-2'} pt-8 pb-4`}>
                                     <div className="flex items-center gap-4 mb-4">
                                         <div className="h-[1px] flex-1 bg-slate-200"></div>
-                                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest bg-white px-4 py-1 rounded-full border border-slate-200 shadow-sm relative z-10">
+                                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest bg-white px-4 py-1 rounded-full border border-slate-200 shadow-sm relative z-10 text-center">
                                             {row.categoryTitle}
                                         </h3>
                                         <div className="h-[1px] flex-1 bg-slate-200"></div>
                                     </div>
-
                                     {(row.aiSummary || row.keyChange) && (
-                                        <div className="mx-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            {row.aiSummary && (
-                                                <div className="md:col-span-2 bg-slate-100/50 p-4 rounded-lg text-xs leading-relaxed text-slate-600 border border-slate-200/50">
-                                                    <strong className="block text-slate-400 text-[10px] uppercase tracking-wider mb-1">Summary</strong>
-                                                    {row.aiSummary}
-                                                </div>
-                                            )}
-                                            {row.keyChange && (
-                                                <div className="bg-amber-50/50 p-4 rounded-lg text-xs leading-relaxed text-slate-700 border border-amber-100/50">
-                                                    <strong className="block text-amber-400 text-[10px] uppercase tracking-wider mb-1">Key Change</strong>
-                                                    {row.keyChange}
-                                                </div>
-                                            )}
+                                        <div className={`mx-0 ${forceMobileMode ? '' : 'md:mx-4'} mb-6 grid grid-cols-1 ${forceMobileMode ? '' : 'md:grid-cols-3'} gap-4`}>
+                                            {row.aiSummary && <div className={`bg-slate-100/50 p-4 rounded-lg text-xs leading-relaxed text-slate-600 border border-slate-200/50 ${forceMobileMode ? '' : 'md:col-span-2'}`}><strong>Summary</strong> {row.aiSummary}</div>}
+                                            {row.keyChange && <div className="bg-amber-50/50 p-4 rounded-lg text-xs leading-relaxed text-slate-700 border border-amber-100/50"><strong>Key Change</strong> {row.keyChange}</div>}
                                         </div>
                                     )}
                                 </div>
                             )}
-                            <DiffRowItem row={row} onJumpToPage={onJumpToPage} />
+                            <DiffRowItem row={row} onJumpToPage={onJumpToPage} forceMobileMode={forceMobileMode} />
                         </React.Fragment>
                     );
                 })}
             </div>
-
-            {displayRows.length === 0 && (
-                <div className="p-10 text-center text-slate-400">No content to compare.</div>
-            )}
         </div>
     );
 }
 
-function DiffRowItem({ row, onJumpToPage }: { row: DisplayRow, onJumpToPage?: (p: number, s: 'left' | 'right') => void }) { // เปลี่ยน Type เป็น DisplayRow
+export default React.memo(DiffViewerComponent);
+function DiffRowItem({ row, onJumpToPage, forceMobileMode }: { row: DisplayRow, onJumpToPage?: (p: number, s: 'left' | 'right') => void, forceMobileMode: boolean }) {
     const { status, left, right, isCompact } = row;
-
     const cardBase = "rounded-lg border shadow-sm transition-all hover:shadow-md h-full flex flex-col group/card p-3 relative";
-    const emptyState = "h-full border-none bg-transparent invisible";
-
-    // --- Color Logic ใหม่ ---
-    // ถ้าเป็น Compact: 
-    //   - ฝั่งซ้าย (ถ้ามี) เป็น REMOVE เสมอ -> สีแดง
-    //   - ฝั่งขวา (ถ้ามี) เป็น ADD เสมอ -> สีเขียว
-    // ถ้าไม่ใช่ Compact: ใช้ Logic เดิม
-
-    const leftStyle = (status === 'REMOVE' || (isCompact && left))
-        ? 'bg-red-50 border-red-200'
-        : 'bg-white border-slate-200';
-
-    const rightStyle = (status === 'ADD' || (isCompact && right))
-        ? 'bg-emerald-50 border-emerald-200'
-        : status === 'MODIFIED'
-            ? 'bg-amber-50 border-amber-200'
-            : 'bg-white border-slate-200';
+    const emptyState = forceMobileMode ? "hidden" : "hidden md:block h-full border-none bg-transparent invisible";
+    const leftStyle = (status === 'REMOVE' || (isCompact && left)) ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200';
+    const rightStyle = (status === 'ADD' || (isCompact && right)) ? 'bg-emerald-50 border-emerald-200' : status === 'MODIFIED' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200';
 
     const PdfButton = ({ pageNumber, side }: { pageNumber: number, side: 'left' | 'right' }) => (
         <button
@@ -148,7 +107,6 @@ function DiffRowItem({ row, onJumpToPage }: { row: DisplayRow, onJumpToPage?: (p
                 e.stopPropagation();
                 onJumpToPage?.(pageNumber, side);
             }}
-            // ใช้ float-right เพื่อให้ชิดขวา และ ml-2 เพื่อเว้นระยะจากตัวอักษรถ้ามันมาชน
             className="float-right ml-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-slate-200 bg-white text-[10px] font-medium text-slate-400 shadow-sm transition-all hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 cursor-pointer select-none"
             title={`Open PDF at page ${pageNumber}`}
         >
@@ -159,21 +117,25 @@ function DiffRowItem({ row, onJumpToPage }: { row: DisplayRow, onJumpToPage?: (p
         </button>
     );
 
+
+    const gridClass = forceMobileMode
+        ? "grid grid-cols-1 gap-2 items-start group"
+        : "grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 items-start group";
+
+    const labelClass = forceMobileMode
+        ? "text-[9px] font-bold text-slate-400 uppercase mr-2 bg-slate-100 px-1 rounded"
+        : "md:hidden text-[9px] font-bold text-slate-400 uppercase mr-2 bg-slate-100 px-1 rounded";
+
     return (
-        <div className="grid grid-cols-2 gap-4 items-start group"> {/* items-start สำคัญมาก! */}
-            {/* LEFT SIDE */}
-            <div className="relative">
+        <div className={gridClass}>
+            <div className="relative w-full">
                 {left ? (
                     <div className={`${cardBase} ${leftStyle}`}>
-                        {/* ... Content ... */}
-                        <div className="flex-1 font-thai-loop text-xs text-slate-600 leading-relaxed text-justify block">
+                        <div className="flex-1 font-thai-loop text-[11px] text-slate-700 leading-relaxed text-justify block">
                             {left.pageNumber && <PdfButton pageNumber={left.pageNumber} side="left" />}
-                            <span className="font-mono font-bold text-slate-400 mr-2 select-none">
-                                § {left.id}
-                            </span>
-                            {/* เพิ่ม Badge บอกสถานะ ถ้าเป็น Compact mode */}
+                            <span className="font-mono font-bold text-slate-400 mr-2 select-none text-[10px]">§ {left.id}</span>
+                            <span className={labelClass}>REF</span>
                             {isCompact && <span className="text-[9px] text-red-500 font-bold bg-white/50 px-1 rounded mr-1">REMOVED</span>}
-
                             {left.content}
                         </div>
                     </div>
@@ -181,20 +143,14 @@ function DiffRowItem({ row, onJumpToPage }: { row: DisplayRow, onJumpToPage?: (p
                     <div className={emptyState} aria-hidden="true" />
                 )}
             </div>
-
-            {/* RIGHT SIDE */}
-            <div className="relative">
+            <div className="relative w-full">
                 {right ? (
                     <div className={`${cardBase} ${rightStyle}`}>
-                        {/* ... Content ... */}
-                        <div className="flex-1 font-thai-loop text-xs text-slate-600 leading-relaxed text-justify block">
+                        <div className="flex-1 font-thai-loop text-[11px] text-slate-700 leading-relaxed text-justify block">
                             {right.pageNumber && <PdfButton pageNumber={right.pageNumber} side="right" />}
-                            <span className="font-mono font-bold text-slate-400 mr-2 select-none">
-                                § {right.id}
-                            </span>
-                            {/* เพิ่ม Badge บอกสถานะ ถ้าเป็น Compact mode */}
+                            <span className="font-mono font-bold text-slate-400 mr-2 select-none text-[10px]">§ {right.id}</span>
+                            <span className={labelClass}>NEW</span>
                             {isCompact && <span className="text-[9px] text-emerald-600 font-bold bg-white/50 px-1 rounded mr-1">NEW</span>}
-
                             {right.content}
                         </div>
                     </div>
