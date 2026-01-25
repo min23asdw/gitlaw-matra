@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useImperativeHandle, useState } from 'react';
 import { Document, Page } from 'react-pdf';
 import { FileText, X } from 'lucide-react';
 import { ConstitutionContent, ConstitutionMeta } from '@/utils/dataLoader';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 
 interface PDFSidebarProps {
     side: 'left' | 'right';
@@ -15,7 +16,11 @@ interface PDFSidebarProps {
     onClose: () => void;
 }
 
-const PDFSidebar = React.forwardRef<HTMLDivElement, PDFSidebarProps>(({
+export interface PDFSidebarRef {
+    scrollToPage: (pageNumber: number) => void;
+}
+
+const PDFSidebar = React.forwardRef<PDFSidebarRef, PDFSidebarProps>(({
     side,
     data,
     meta,
@@ -25,69 +30,106 @@ const PDFSidebar = React.forwardRef<HTMLDivElement, PDFSidebarProps>(({
     onClose
 }, ref) => {
 
+    const virtuosoRef = useRef<VirtuosoHandle>(null);
+    const [highlightPage, setHighlightPage] = useState<number | null>(null);
+
     const pdfUrl = `/${data.id}.pdf`;
     const pageCount = meta?.pageCount || 15;
+    const pageWidth = isMobile ? (windowWidth * 0.75) - 32 : 380;
+    const pageHeight = pageWidth * 1.414; // อัตราส่วน A4
 
-    const mobileClasses = `
-        fixed top-0 bottom-0 z-[60] w-[65vw] h-full
-        transition-transform duration-300 ease-out
-        ${side === 'left' ? 'left-0 border-r' : 'right-0 border-l'}
-        ${isOpen ? 'translate-x-0' : (side === 'left' ? '-translate-x-full' : 'translate-x-full')}
+    useImperativeHandle(ref, () => ({
+        scrollToPage: (pageNumber: number) => {
+            if (virtuosoRef.current) {
+                virtuosoRef.current.scrollToIndex({
+                    index: pageNumber - 1,
+                    align: 'center',
+                    behavior: 'smooth'
+                });
+
+                setHighlightPage(pageNumber);
+                setTimeout(() => setHighlightPage(null), 2000);
+            }
+        }
+    }));
+
+    const containerClasses = `
+        bg-slate-900 border-slate-700 shadow-2xl flex flex-col 
+        h-full w-full ${isMobile ? 'min-w-[75vw]' : 'min-w-[450px]'}
+        ${isMobile
+            ? `fixed top-0 bottom-0 z-[60] transition-transform duration-300 ease-out 
+               ${side === 'left' ? 'left-0 border-r' : 'right-0 border-l'} 
+               ${isOpen ? 'translate-x-0' : (side === 'left' ? '-translate-x-full' : 'translate-x-full')}`
+            : `relative z-0 h-full border-slate-700 overflow-hidden`
+        }
     `;
-
-    const desktopClasses = `
-        relative z-0 h-full border-slate-700
-        transition-[width,opacity] duration-300 ease-in-out overflow-hidden
-        ${isOpen ? 'w-[450px] border-x opacity-100' : 'w-0 border-none opacity-0'}
-    `;
-
-    const containerClasses = isMobile ? mobileClasses : desktopClasses;
 
     return (
         <React.Fragment>
-            {/* Mobile Backdrop */}
-            {isMobile && (
-                <div
-                    className={`
-                        fixed inset-0 z-[50] bg-black/60 backdrop-blur-sm transition-opacity duration-300
-                        ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
-                    `}
-                    onClick={onClose}
-                    aria-hidden="true"
-                />
-            )}
+            <div className={containerClasses}>
+                {/* Header */}
+                <div className="flex rounded-md overflow-hidden items-center justify-between px-3 py-2 bg-black/40 backdrop-blur-md border-b border-white/10 text-white shrink-0 z-10">
+                    <span className="hidden md:flex text-xs font-mono text-slate-300   items-center gap-2">
+                        <FileText size={14} /> {side === 'left' ? 'Ref (Left)' : 'Comp (Right)'}
+                    </span>
+                    <button onClick={onClose} className="md:flex hidden hover:bg-white/20 p-2 rounded-full transition active:bg-white/30">
+                        <X size={18} />
+                    </button>
+                </div>
 
-            <div
-                className={`bg-slate-900 border-slate-700 shadow-2xl flex flex-col ${containerClasses}`}
-            >
-                <div className={`flex flex-col h-full w-full ${isMobile ? 'min-w-[65vw]' : 'min-w-[450px]'}`}>
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 text-white shrink-0">
-                        <span className="text-xs font-mono text-slate-300 flex items-center gap-2">
-                            <FileText size={14} /> {side === 'left' ? 'Ref (Left)' : 'Comp (Right)'}
-                        </span>
-                        <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-full transition active:bg-white/30">
-                            <X size={18} />
-                        </button>
-                    </div>
+                {/* Content */}
+                <div className="flex-1 overflow-hidden bg-slate-900/95 relative overscroll-contain">
+                    <Document
+                        file={pdfUrl}
+                        className="h-full"
+                        loading={
+                            <div className="flex items-center justify-center h-full text-white/50 text-sm">
+                                Loading PDF...
+                            </div>
+                        }
+                        error={
+                            <div className="flex items-center justify-center h-full text-red-400 text-sm p-4 text-center">
+                                ไม่สามารถโหลดไฟล์ PDF ได้ ({pdfUrl})
+                            </div>
+                        }
+                    >
+                        <Virtuoso
+                            ref={virtuosoRef}
+                            style={{ height: '100%', width: '100%' }}
+                            totalCount={pageCount}
+                            className="custom-scrollbar overscroll-contain"
+                            overscan={2}
+                            itemContent={(index) => {
+                                const pageNum = index + 1;
+                                const isHighlighted = highlightPage === pageNum;
 
-                    <div ref={ref} className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6 bg-slate-900/95">
-                        <Document file={pdfUrl} className="flex flex-col gap-6 items-center" loading={null} error={null}>
-                            {Array.from(new Array(pageCount), (_, i) => (
-                                <div key={i + 1} data-page-number={i + 1} className="relative w-full flex justify-center">
-                                    <Page
-                                        pageNumber={i + 1}
-                                        width={isMobile ? (windowWidth * 0.65) - 32 : 300}
-                                        renderTextLayer={false}
-                                        renderAnnotationLayer={false}
-                                        className="shadow-lg rounded-sm bg-white"
-                                        loading={<div className="bg-white w-full h-[400px] shadow-lg rounded-sm" />}
-                                    />
-                                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] text-slate-500 font-mono">{i + 1}</span>
-                                </div>
-                            ))}
-                        </Document>
-                    </div>
+                                return (
+                                    <div className="flex justify-center py-6 w-full">
+                                        <div className={`relative transition-transform duration-300 ${isHighlighted ? 'scale-105' : ''}`}>
+                                            <Page
+                                                pageNumber={pageNum}
+                                                width={pageWidth}
+                                                renderTextLayer={false}
+                                                renderAnnotationLayer={false}
+                                                className={`shadow-[0_0_15px_rgba(0,0,0,0.5)] rounded-sm bg-white transition-all duration-300 ${isHighlighted ? 'ring-4 ring-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.5)]' : ''}`}
+                                                loading={
+                                                    <div
+                                                        style={{ width: pageWidth, height: pageHeight }}
+                                                        className="bg-white/10 shadow-lg rounded-sm animate-pulse flex items-center justify-center"
+                                                    >
+                                                        <span className="text-white/20 text-xs">Loading Page {pageNum}...</span>
+                                                    </div>
+                                                }
+                                            />
+                                            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-slate-500 font-mono bg-black/40 px-2 py-0.5 rounded-full">
+                                                Page {pageNum}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            }}
+                        />
+                    </Document>
                 </div>
             </div>
         </React.Fragment>

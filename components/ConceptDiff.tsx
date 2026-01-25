@@ -1,23 +1,24 @@
 'use client';
 import React, { useMemo } from 'react';
 import { CategoryOverview, ConstitutionMeta } from '@/utils/dataLoader';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Props {
     leftMeta: ConstitutionMeta;
     rightMeta: ConstitutionMeta;
     categories: CategoryOverview[];
-    onCategoryClick: (catId: string) => void;
+    isCollapsed: boolean;
+    onToggleCollapse: () => void;
 }
 
-export default function ConceptDiff({ leftMeta, rightMeta, categories, onCategoryClick }: Props) {
-
-    // 1. คำนวณ "น้ำหนัก" ของแต่ละหมวด (Total Page Ratio)
+function ConceptDiff({ leftMeta, rightMeta, categories, isCollapsed, onToggleCollapse }: Props) {
+    // 1. Calculate "Weight" of each category (Total Page Ratio)
     const calculateWeight = (meta: ConstitutionMeta) => {
         const weights: Record<string, number> = {};
         meta.pages.flat().forEach(p => {
             weights[p.categoryId] = (weights[p.categoryId] || 0) + p.pageRatio;
         });
-        // แปลงเป็น % เทียบกับจำนวนหน้าทั้งหมด
+        // Convert to % relative to total pages
         Object.keys(weights).forEach(k => {
             weights[k] = (weights[k] / meta.pageCount) * 100;
         });
@@ -27,71 +28,102 @@ export default function ConceptDiff({ leftMeta, rightMeta, categories, onCategor
     const leftWeights = useMemo(() => calculateWeight(leftMeta), [leftMeta]);
     const rightWeights = useMemo(() => calculateWeight(rightMeta), [rightMeta]);
 
-    // Helper หาข้อมูลหมวด
-    const getCat = (id: string) => categories.find(c => c.id === id);
-
     return (
-        <div className="w-full bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6 shadow-sm z-20 relative">
+        <div className={`w-full bg-white/80 backdrop-blur border-b border-gray-200 px-4 md:px-8 shadow-sm z-20 relative transition-all duration-300 ${isCollapsed ? 'py-1' : 'py-4'}`}>
 
-            {/* Legend / Title */}
-            <div className="shrink-0 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Structure Analysis</div>
-                <div className="flex gap-2 text-[10px] text-gray-500">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span>เพิ่ม</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400"></span>ลบ</span>
-                </div>
-            </div>
+            {/* Toggle Button - Centered Absolute */}
+            <button
+                onClick={onToggleCollapse}
+                className="absolute left-1/2 -translate-x-1/2 -bottom-3 z-30 bg-white border border-gray-200 rounded-b-lg px-3 py-0.5 shadow-sm text-slate-400 hover:text-blue-500 hover:shadow-md transition-all flex items-center justify-center"
+            >
+                {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+            </button>
 
-            <div className="flex-1 flex gap-4 items-center">
-                {/* --- LEFT DNA BAR --- */}
-                <div className="flex-1 relative group/bar">
-                    <div className="h-6 w-full flex rounded overflow-hidden bg-gray-100 relative">
-                        {categories.map(cat => {
-                            const width = leftWeights[cat.id] || 0;
-                            if (width === 0) return null;
-                            return (
-                                <div
-                                    key={cat.id}
-                                    style={{ width: `${width}%`, backgroundColor: cat.color }}
-                                    className="h-full hover:brightness-110 cursor-pointer transition-all relative group"
-                                    onClick={() => onCategoryClick(cat.id)}
-                                >
-                                    {/* Tooltip */}
-                                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-30 pointer-events-none shadow-lg">
-                                        {cat.title} ({width.toFixed(1)}%)
-                                    </div>
+            {/* Comparison Area - Collapsible */}
+            <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}>
+                <div className="overflow-hidden">
+                    <div className="flex flex-col md:flex-row gap-1 md:gap-8 items-stretch pt-2">
+
+                        {/* --- LEFT SIDE --- */}
+                        <div className="flex-1 flex flex-col gap-2 group/left">
+                            <div className="flex justify-between items-end px-1">
+                                <div className="text-sm font-semibold text-slate-700 truncate max-w-none">
+                                    {leftMeta.year} - {leftMeta.name}
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                                <div className="text-[10px] text-slate-400 font-mono">{leftMeta.pageCount} หน้า</div>
+                            </div>
 
-                {/* --- VS / Stats --- */}
-                <div className="text-[10px] font-mono text-gray-400">VS</div>
+                            <div className="h-2 md:h-4 w-full flex rounded-xl overflow-hidden bg-slate-100 relative shadow-inner ring-1 ring-slate-200/50">
+                                {categories.map(cat => {
+                                    const width = leftWeights[cat.id] || 0;
+                                    if (width === 0) return null;
+                                    return (
+                                        <div
+                                            key={cat.id}
+                                            style={{ width: `${width}%`, backgroundColor: cat.color }}
+                                            className="h-full hover:brightness-110 hover:scale-y-110 transition-all duration-200 relative group"
+                                        >
+                                            {/* Tooltip */}
+                                            <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-md whitespace-nowrap z-30 pointer-events-none shadow-xl transform translate-y-1 group-hover:translate-y-0 transition-transform">
+                                                <div className="font-bold mb-0.5">{cat.title}</div>
+                                                <div className="text-slate-300 font-mono text-[9px]">{width.toFixed(1)}%</div>
+                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
-                {/* --- RIGHT DNA BAR --- */}
-                <div className="flex-1 relative group/bar">
-                    <div className="h-6 w-full flex rounded overflow-hidden bg-gray-100 relative">
-                        {categories.map(cat => {
-                            const width = rightWeights[cat.id] || 0;
-                            if (width === 0) return null;
-                            return (
-                                <div
-                                    key={cat.id}
-                                    style={{ width: `${width}%`, backgroundColor: cat.color }}
-                                    className="h-full hover:brightness-110 cursor-pointer transition-all relative group"
-                                    onClick={() => onCategoryClick(cat.id)}
-                                >
-                                    {/* Tooltip */}
-                                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-30 pointer-events-none shadow-lg">
-                                        {cat.title} ({width.toFixed(1)}%)
-                                    </div>
+                        {/* --- VS Separator --- */}
+                        <div className="relative flex items-center justify-center py-0">
+                            <div className="hidden md:flex absolute inset-0 items-center justify-center">
+                                <div className="w-full h-px bg-slate-200"></div>
+                            </div>
+                            <div className="hidden md:flex absolute inset-0 items-center justify-center">
+                                <div className="h-full w-px bg-slate-200"></div>
+                            </div>
+                            <div className="hidden md:flex relative z-10 bg-white rounded-full p-1.5 border border-slate-100 shadow-sm text-[10px] font-black text-slate-400">
+                                VS
+                            </div>
+                        </div>
+
+                        {/* --- RIGHT SIDE --- */}
+                        <div className="flex-1 flex flex-col gap-2 group/right">
+                            <div className="flex justify-between items-end px-1 md:flex-row">
+                                <div className="text-sm font-semibold text-slate-700 truncate  max-w-none">
+                                    {rightMeta.year} - {rightMeta.name}
                                 </div>
-                            );
-                        })}
+                                <div className="text-[10px] text-slate-400 font-mono">{rightMeta.pageCount} หน้า</div>
+                            </div>
+
+                            <div className="h-2 md:h-4 w-full flex rounded-xl overflow-hidden bg-slate-100 relative shadow-inner ring-1 ring-slate-200/50 flex-row">
+                                {categories.map(cat => {
+                                    const width = rightWeights[cat.id] || 0;
+                                    if (width === 0) return null;
+                                    return (
+                                        <div
+                                            key={cat.id}
+                                            style={{ width: `${width}%`, backgroundColor: cat.color }}
+                                            className="h-full hover:brightness-110 hover:scale-y-110 transition-all duration-200 relative group"
+                                        >
+                                            {/* Tooltip */}
+                                            <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-md whitespace-nowrap z-30 pointer-events-none shadow-xl transform translate-y-1 group-hover:translate-y-0 transition-transform">
+                                                <div className="font-bold mb-0.5">{cat.title}</div>
+                                                <div className="text-slate-300 font-mono text-[9px]">{width.toFixed(1)}%</div>
+                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
         </div>
     );
 }
+
+export default React.memo(ConceptDiff);

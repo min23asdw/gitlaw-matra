@@ -4,6 +4,7 @@ import { SectionContent } from '@/utils/dataLoader';
 import { alignSections, DiffRow } from '@/utils/diffEngine';
 import DiffSection from './DiffSection';
 import { DisplayRow } from '@/types/diffView';
+import { Virtuoso } from 'react-virtuoso';
 
 interface Props {
     leftSections: SectionContent[];
@@ -70,24 +71,33 @@ function DiffViewerComponent({ leftSections, rightSections, onJumpToPage, forceM
         });
         return groups;
     }, [displayRows]);
-
     return (
-        <div className="w-full font-sans text-sm pb-20 bg-slate-50/50">
-            <div className={`${forceMobileMode ? 'hidden' : 'hidden md:grid'} grid-cols-2 gap-4 sticky top-0 bg-white/95 backdrop-blur z-20 border-b border-slate-200 shadow-sm px-4 py-2 font-bold text-slate-500 uppercase text-xs tracking-wider`}>
+        <div className="w-full h-full flex flex-col font-sans text-sm bg-slate-50/50">
+
+            <div
+                className={`${forceMobileMode ? 'hidden' : 'hidden md:grid'} grid-cols-2 gap-4 bg-white/95 backdrop-blur z-20 border-b border-slate-200 shadow-sm px-4 py-2 font-bold text-slate-500 uppercase text-xs tracking-wider shrink-0`}
+            >
                 <div className="text-center">Reference Document</div>
                 <div className="text-center">Comparison Document</div>
             </div>
 
-            <div className="px-4 pb-4">
-                {groupedRows.map((group, index) => (
-                    <DiffSection
-                        key={`${group.id}-${index}`}
-                        group={group}
-                        index={index}
-                        onJumpToPage={onJumpToPage}
-                        forceMobileMode={forceMobileMode}
-                    />
-                ))}
+            <div className="flex-1 min-h-0">
+                <Virtuoso
+                    style={{ height: '100%' }}
+                    data={groupedRows}
+                    className="custom-scrollbar"
+                    overscan={150}
+                    itemContent={(index, group) => (
+                        <div className="px-4 pb-4">
+                            <DiffSection
+                                key={`${group.id}-${index}`}
+                                group={group}
+                                onJumpToPage={onJumpToPage}
+                                forceMobileMode={forceMobileMode}
+                            />
+                        </div>
+                    )}
+                />
             </div>
         </div>
     );

@@ -4,9 +4,8 @@ import React from 'react';
 import { DisplayRow } from '@/types/diffView';
 import DiffRowItem from './DiffRowItem';
 
-const DiffSection = React.memo(({ group, index, onJumpToPage, forceMobileMode }: {
+const DiffSection = React.memo(({ group, onJumpToPage, forceMobileMode }: {
     group: { id: string; title: string; rows: DisplayRow[] };
-    index: number;
     onJumpToPage?: (p: number, s: 'left' | 'right') => void;
     forceMobileMode: boolean;
 }) => {
@@ -16,18 +15,19 @@ const DiffSection = React.memo(({ group, index, onJumpToPage, forceMobileMode }:
         : "space-y-6 relative z-0 mt-2";
 
     return (
-        <section className="relative mb-8 pt-8">
-            <div className={`
-                sticky z-30 py-2 px-4 -mx-4 
-                bg-slate-100/95 backdrop-blur border-b border-slate-200 shadow-sm
-                transition-all duration-200
-                ${forceMobileMode ? 'top-0' : 'top-0 md:top-[33px]'}
-            `}>
+        <section key={`section-${group.id}`} className="relative mb-8 pt-8">
+            <div
+                className={`
+                    sticky z-30 py-2 px-4 -mx-4 
+                    bg-slate-100/95 backdrop-blur border-b border-slate-200 shadow-sm
+                    transition-all duration-200 top-0
+                `}
+            >
                 <div className="flex items-center gap-4">
                     <h3 className="text-xs md:text-lg font-bold text-slate-700 uppercase tracking-widest bg-white px-4 py-1 rounded-lg border border-slate-200 shadow-sm whitespace-normal text-center">
                         {group.title}
                     </h3>
-                    <div className="h-[1px] flex-1 bg-slate-300"></div>
+                    <div className="h-px flex-1 bg-slate-300"></div>
                 </div>
             </div>
 
