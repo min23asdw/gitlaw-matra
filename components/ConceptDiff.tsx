@@ -37,8 +37,8 @@ export default function ConceptDiff({ leftMeta, rightMeta, categories, onCategor
             <div className="shrink-0 flex flex-col justify-center">
                 <div className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Structure Analysis</div>
                 <div className="flex gap-2 text-[10px] text-gray-500">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> New</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400"></span> Removed</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span>เพิ่ม</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400"></span>ลบ</span>
                 </div>
             </div>
 

@@ -38,7 +38,7 @@ const PDFSidebar = React.forwardRef<HTMLDivElement, PDFSidebarProps>(({
     const desktopClasses = `
         relative z-0 h-full border-slate-700
         transition-[width,opacity] duration-300 ease-in-out overflow-hidden
-        ${isOpen ? 'w-[350px] border-x opacity-100' : 'w-0 border-none opacity-0'}
+        ${isOpen ? 'w-[450px] border-x opacity-100' : 'w-0 border-none opacity-0'}
     `;
 
     const containerClasses = isMobile ? mobileClasses : desktopClasses;
@@ -60,7 +60,7 @@ const PDFSidebar = React.forwardRef<HTMLDivElement, PDFSidebarProps>(({
             <div
                 className={`bg-slate-900 border-slate-700 shadow-2xl flex flex-col ${containerClasses}`}
             >
-                <div className={`flex flex-col h-full w-full ${isMobile ? 'min-w-[65vw]' : 'min-w-[350px]'}`}>
+                <div className={`flex flex-col h-full w-full ${isMobile ? 'min-w-[65vw]' : 'min-w-[450px]'}`}>
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 text-white shrink-0">
                         <span className="text-xs font-mono text-slate-300 flex items-center gap-2">

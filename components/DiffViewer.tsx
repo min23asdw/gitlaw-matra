@@ -28,7 +28,7 @@ function DiffViewerComponent({ leftSections, rightSections, onJumpToPage, forceM
                 const mainSource = rem || add;
                 result.push({
                     key: `compact-${rem?.key || 'x'}-${add?.key || 'y'}`,
-                    status: 'COMPACT' as any,
+                    status: mainSource.status,
                     isCompact: true,
                     left: rem?.left || undefined,
                     right: add?.right || undefined,
