@@ -31,13 +31,21 @@ export default function LiquidPDFLayout({ leftData, rightData, leftMeta, rightMe
     const centerWidth = useDebouncedElementWidth(centerRef, 100);
     const isMobile = windowWidth > 0 && windowWidth < 768;
     const isContentNarrow = centerWidth > 0 && centerWidth < 400;
-    const isCanOpenBothPDF = windowWidth > 900;
+    const isCanOpenBothPDF = windowWidth > 1170;
 
-    useEffect(() => {
-        if ((isMobile || !isCanOpenBothPDF) && showLeftPdf && showRightPdf) {
-            setShowRightPdf(false);
-        }
-    }, [isMobile, isCanOpenBothPDF, showLeftPdf, showRightPdf]);
+    const toggleLeft = useCallback((val: boolean) => {
+        if (val && (isMobile || !isCanOpenBothPDF)) setShowRightPdf(false);
+        setShowLeftPdf(val);
+    }, [isMobile, isCanOpenBothPDF]);
+
+    const toggleRight = useCallback((val: boolean) => {
+        if (val && (isMobile || !isCanOpenBothPDF)) setShowLeftPdf(false);
+        setShowRightPdf(val);
+    }, [isMobile, isCanOpenBothPDF]);
+
+    if ((isMobile || !isCanOpenBothPDF) && showLeftPdf && showRightPdf) {
+        setShowRightPdf(false);
+    }
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -54,15 +62,7 @@ export default function LiquidPDFLayout({ leftData, rightData, leftMeta, rightMe
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [showLeftPdf, showRightPdf]);
 
-    const toggleLeft = useCallback((val: boolean) => {
-        if (val && (isMobile || !isCanOpenBothPDF)) setShowRightPdf(false);
-        setShowLeftPdf(val);
-    }, [isMobile, isCanOpenBothPDF]);
 
-    const toggleRight = useCallback((val: boolean) => {
-        if (val && (isMobile || !isCanOpenBothPDF)) setShowLeftPdf(false);
-        setShowRightPdf(val);
-    }, [isMobile, isCanOpenBothPDF]);
 
     const handleJump = useCallback((pageNum: number, side: 'left' | 'right') => {
         if (side === 'left') toggleLeft(true);

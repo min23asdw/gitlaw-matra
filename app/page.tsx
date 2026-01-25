@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 // Import dynamically to avoid SSR issues with react-pdf
 const LiquidPDFLayout = dynamic(() => import('@/components/LiquidPDFLayout'), { ssr: false });
 import { getAllConstitutions, getConstitutionData } from '@/utils/dataLoader';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 const DEFAULT_LEFT_ID = 'con2475temp';
 const DEFAULT_RIGHT_ID = 'con2475'; // ลองเทียบ Temp กับ Perm ดู
@@ -14,9 +14,9 @@ export default function SemanticDiffPage() {
   const [rightId, setRightId] = useState(DEFAULT_RIGHT_ID);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  const leftData = getConstitutionData(leftId);
-  const rightData = getConstitutionData(rightId);
-  const allConstitutions = getAllConstitutions();
+  const leftData = useMemo(() => getConstitutionData(leftId), [leftId]);
+  const rightData = useMemo(() => getConstitutionData(rightId), [rightId]);
+  const allConstitutions = useMemo(() => getAllConstitutions(), []);
 
   const handleCategoryClick = (catId: string) => {
     setActiveCategory(catId);
