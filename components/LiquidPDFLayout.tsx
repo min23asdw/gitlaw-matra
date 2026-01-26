@@ -120,7 +120,7 @@ function LiquidPDFLayout({ leftData, rightData, leftMeta, rightMeta, headerColla
             {/* Mobile Backdrop */}
             {isMobile && (showLeftPdf || showRightPdf) && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 touch-none" // เพิ่ม touch-none
+                    className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 touch-none"
                     onClick={() => {
                         if (showLeftPdf) toggleLeft(false);
                         if (showRightPdf) toggleRight(false);

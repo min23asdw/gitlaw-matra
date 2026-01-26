@@ -8,7 +8,7 @@ import { getAllConstitutions, getConstitutionData } from '@/utils/dataLoader';
 import { useState, useMemo } from 'react';
 
 const DEFAULT_LEFT_ID = 'con2475temp';
-const DEFAULT_RIGHT_ID = 'con2475'; // ลองเทียบ Temp กับ Perm ดู
+const DEFAULT_RIGHT_ID = 'con2475';
 
 export default function SemanticDiffPage() {
   const [leftId, setLeftId] = useState(DEFAULT_LEFT_ID);
