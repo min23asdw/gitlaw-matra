@@ -1,7 +1,6 @@
 'use client';
 import ConceptDiff from '@/components/ConceptDiff';
 import WelcomeHero from '@/components/WelcomeHero';
-import SmartHeader from '@/components/SmartHeader';
 import dynamic from 'next/dynamic';
 // Import dynamically to avoid SSR issues with react-pdf
 const LiquidPDFLayout = dynamic(() => import('@/components/LiquidPDFLayout'), { ssr: false });
@@ -31,14 +30,8 @@ export default function SemanticDiffPage() {
 
       {/* Main App Container - Sticky to top, full height */}
 
-      {/* Header & Controls */}
-      <SmartHeader
-        leftId={leftId}
-        setLeftId={setLeftId}
-        rightId={rightId}
-        setRightId={setRightId}
-        allConstitutions={allConstitutions}
-      />
+      {/* Header & Controls - Migrated to ConceptDiff */}
+      {/* <SmartHeader ... /> removed */}
 
       {leftData.meta && rightData.meta && (
         <div className="shrink-0">
@@ -48,6 +41,11 @@ export default function SemanticDiffPage() {
             categories={leftData.categories}
             isCollapsed={isHeaderCollapsed}
             onToggleCollapse={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
+            leftId={leftId}
+            setLeftId={setLeftId}
+            rightId={rightId}
+            setRightId={setRightId}
+            allConstitutions={allConstitutions}
           />
         </div>
       )}

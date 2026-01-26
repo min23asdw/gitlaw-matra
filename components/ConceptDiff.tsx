@@ -1,6 +1,7 @@
-'use client';
 import React, { useMemo } from 'react';
-import { CategoryOverview, ConstitutionMeta } from '@/utils/dataLoader';
+import { CategoryOverview, ConstitutionMeta, Constitution } from '@/utils/dataLoader';
+import { CATEGORY_ORDER } from '@/types';
+import { CATEGORY_COLORS } from '@/utils/categoryColors';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Props {
@@ -9,9 +10,18 @@ interface Props {
     categories: CategoryOverview[];
     isCollapsed: boolean;
     onToggleCollapse: () => void;
+    // Selection Props
+    leftId: string;
+    setLeftId: (id: string) => void;
+    rightId: string;
+    setRightId: (id: string) => void;
+    allConstitutions: Constitution[];
 }
 
-function ConceptDiff({ leftMeta, rightMeta, categories, isCollapsed, onToggleCollapse }: Props) {
+function ConceptDiff({
+    leftMeta, rightMeta, categories, isCollapsed, onToggleCollapse,
+    leftId, setLeftId, rightId, setRightId, allConstitutions
+}: Props) {
     // 1. Calculate "Weight" of each category (Total Page Ratio)
     const calculateWeight = (meta: ConstitutionMeta) => {
         const weights: Record<string, number> = {};
@@ -39,6 +49,28 @@ function ConceptDiff({ leftMeta, rightMeta, categories, isCollapsed, onToggleCol
                 {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
             </button>
 
+            {/* Legend */}
+            <div className={`
+                flex gap-2 overflow-x-auto py-1 mb-1 px-1
+                transition-all duration-300 ease-in-out
+                [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']
+                ${isCollapsed ? 'opacity-0 h-0 py-0 mb-0 pointer-events-none' : 'opacity-100 h-auto pointer-events-auto'}
+            `}>
+                {CATEGORY_ORDER.map(cat => {
+                    const color = CATEGORY_COLORS[cat.id] || "#ccc";
+                    return (
+                        <div
+                            key={cat.id}
+                            className="flex items-center gap-1.5 shrink-0 bg-slate-50 px-2 py-1 rounded-full border border-slate-100 text-[10px] font-medium text-slate-600 hover:bg-slate-100 transition-colors cursor-default"
+                            title={cat.name}
+                        >
+                            <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: color }}></span>
+                            <span className="whitespace-nowrap">{cat.name}</span>
+                        </div>
+                    );
+                })}
+            </div>
+
             {/* Comparison Area - Collapsible */}
             <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}>
                 <div className="overflow-hidden">
@@ -46,11 +78,22 @@ function ConceptDiff({ leftMeta, rightMeta, categories, isCollapsed, onToggleCol
 
                         {/* --- LEFT SIDE --- */}
                         <div className="flex-1 flex flex-col gap-2 group/left">
-                            <div className="flex justify-between items-end px-1">
-                                <div className="text-sm font-semibold text-slate-700 truncate max-w-none">
-                                    {leftMeta.year} - {leftMeta.name}
+                            <div className="flex justify-between items-end px-1 gap-3">
+                                {/* Left Selector */}
+                                <div className="relative flex-1 group/select">
+                                    <div className="absolute inset-0 bg-white border border-slate-200 shadow-sm rounded-xl group-hover/select:border-blue-300 group-hover/select:shadow-md transition-all -z-10" />
+                                    <select
+                                        value={leftId}
+                                        onChange={(e) => setLeftId(e.target.value)}
+                                        className="appearance-none bg-transparent font-bold text-sm text-slate-800 w-full cursor-pointer hover:text-blue-700 focus:outline-none py-2 pl-3 pr-8 truncate transition-colors"
+                                    >
+                                        {allConstitutions.map(c => (
+                                            <option key={c.id} value={c.id}>{c.year} - {c.name}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover/select:text-blue-500 pointer-events-none transition-colors" />
                                 </div>
-                                <div className="text-[10px] text-slate-400 font-mono">{leftMeta.pageCount} หน้า</div>
+                                <div className="text-[10px] text-slate-400 font-mono shrink-0 pb-2">{leftMeta.pageCount} หน้า</div>
                             </div>
 
                             <div className="h-2 md:h-4 w-full flex rounded-xl overflow-hidden bg-slate-100 relative shadow-inner ring-1 ring-slate-200/50">
@@ -90,11 +133,22 @@ function ConceptDiff({ leftMeta, rightMeta, categories, isCollapsed, onToggleCol
 
                         {/* --- RIGHT SIDE --- */}
                         <div className="flex-1 flex flex-col gap-2 group/right">
-                            <div className="flex justify-between items-end px-1 md:flex-row">
-                                <div className="text-sm font-semibold text-slate-700 truncate  max-w-none">
-                                    {rightMeta.year} - {rightMeta.name}
+                            <div className="flex justify-between items-end px-1 md:flex-row gap-3">
+                                {/* Right Selector */}
+                                <div className="relative flex-1 text-right md:order-1 order-0 ml-auto group/select">
+                                    <div className="absolute inset-0 bg-white border border-slate-200 shadow-sm rounded-xl group-hover/select:border-blue-300 group-hover/select:shadow-md transition-all -z-10" />
+                                    <select
+                                        value={rightId}
+                                        onChange={(e) => setRightId(e.target.value)}
+                                        className="appearance-none bg-transparent font-bold text-sm text-slate-800 w-full cursor-pointer hover:text-blue-700 focus:outline-none py-2 pl-3 md:pl-8 pr-3 truncate transition-colors md:text-right md:dir-rtl"
+                                    >
+                                        {allConstitutions.map(c => (
+                                            <option key={c.id} value={c.id}>{c.year} - {c.name}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={16} className="absolute right-3 md:left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover/select:text-blue-500 pointer-events-none transition-colors" />
                                 </div>
-                                <div className="text-[10px] text-slate-400 font-mono">{rightMeta.pageCount} หน้า</div>
+                                <div className="text-[10px] text-slate-400 font-mono shrink-0 md:order-0 order-1 pb-2">{rightMeta.pageCount} หน้า</div>
                             </div>
 
                             <div className="h-2 md:h-4 w-full flex rounded-xl overflow-hidden bg-slate-100 relative shadow-inner ring-1 ring-slate-200/50 flex-row">

@@ -116,7 +116,7 @@ function LiquidPDFLayout({ leftData, rightData, leftMeta, rightMeta, headerColla
 
 
     return (
-        <div className={`flex flex-1 w-full max-w-[2000px] mx-auto overflow-hidden bg-slate-200 rounded-xl shadow-2xl border border-slate-300 relative group/main transition-all duration-300 ${headerCollapsed ? 'h-[92dvh]' : 'h-[80dvh] md:h-[85dvh]'}`}>
+        <div className={`flex flex-1 w-full max-w-[2000px] mx-auto overflow-hidden bg-slate-200 rounded-xl shadow-2xl border border-slate-300 relative group/main transition-all duration-300 ${headerCollapsed ? 'h-[98dvh]' : 'h-[80dvh] md:h-[84dvh]'}`}>
             {/* Mobile Backdrop */}
             {isMobile && (showLeftPdf || showRightPdf) && (
                 <div

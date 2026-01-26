@@ -50,6 +50,12 @@ export interface PageRatio {
     pageRatio: number;
 }
 
+export interface Constitution {
+    id: string;
+    year: number | string;
+    name: string;
+}
+
 export interface ConstitutionMeta {
     pageCount: number;
     id: string;
