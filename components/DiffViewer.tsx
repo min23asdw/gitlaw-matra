@@ -75,7 +75,7 @@ function DiffViewerComponent({ leftSections, rightSections, onJumpToPage, forceM
         <div className="w-full h-full flex flex-col font-sans text-sm bg-slate-50/50">
 
             <div
-                className={`${forceMobileMode ? 'hidden' : 'hidden md:grid'} grid-cols-2 gap-4 bg-white/95 backdrop-blur z-20 border-b border-slate-200 shadow-sm px-4 py-2 font-bold text-slate-500 uppercase text-xs tracking-wider shrink-0`}
+                className={`${forceMobileMode ? 'hidden' : 'hidden md:grid'} select-none grid-cols-2 gap-4 bg-white/95 backdrop-blur z-20 border-b border-slate-200 shadow-sm px-4 py-2 font-bold text-slate-500 uppercase text-xs tracking-wider shrink-0`}
             >
                 <div className="text-center">Reference Document</div>
                 <div className="text-center">Comparison Document</div>

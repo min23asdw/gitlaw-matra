@@ -39,7 +39,7 @@ function ConceptDiff({
     const rightWeights = useMemo(() => calculateWeight(rightMeta), [rightMeta]);
 
     return (
-        <div className={`w-full bg-white/80 backdrop-blur border-b border-gray-200 px-4 md:px-8 shadow-sm z-20 relative transition-all duration-300 ${isCollapsed ? 'py-1' : 'py-4'}`}>
+        <div className={`w-full select-none bg-white/80 backdrop-blur border-b border-gray-200 px-4 md:px-8 shadow-sm z-20 relative transition-all duration-300 ${isCollapsed ? 'py-1' : 'py-4'}`}>
 
             {/* Toggle Button - Centered Absolute */}
             <button

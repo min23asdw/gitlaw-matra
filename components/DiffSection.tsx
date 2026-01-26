@@ -12,7 +12,7 @@ const DiffSection = React.memo(({ group, onJumpToPage, forceMobileMode }: {
     const firstRow = group.rows[0];
     const classGroupItem = forceMobileMode
         ? "space-y-1 relative z-0 mt-2"
-        : "space-y-6 relative z-0 mt-2";
+        : "space-y-1 relative z-0 mt-2";
 
     return (
         <section key={`section-${group.id}`} className="relative mb-8 pt-8">
