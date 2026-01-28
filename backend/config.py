@@ -5,6 +5,8 @@ load_dotenv()
 
 # API Keys
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+TYPHOOON_OCR_API_KEY = os.getenv("TYPHOOON_OCR_API_KEY")
 
 # Categories (18 categories as per spec)
 CATEGORIES = {
