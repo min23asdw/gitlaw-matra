@@ -1,8 +1,6 @@
-// src/utils/dataLoader.ts
-// 🔥 IMPORT ไฟล์ใหม่
 import rich2475Perm from '@/backend/json_output/final/con2475_full_summary.json';
 import rich2475Temp from '@/backend/json_output/final/con2475temp_full_summary.json';
-import rich2489Perm from '@/backend/json_output/final/con2489_full_summary.json';
+// import rich2489Perm from ... (ถ้ามีไฟล์ 2489 ให้ import เข้ามาด้วย)
 
 import { CATEGORY_COLORS } from '@/utils/categoryColors';
 import { PDF_PAGE_MAPPING, PDF_TOTAL_PAGES } from '@/mapping/pdfPageMapping';
@@ -20,19 +18,29 @@ export interface SectionContent {
     chapter_name: string;
     category_id?: string;
     status?: string;
+    type?: string;
     similarity?: number;
-    pageNumber?: number; // ✅ เพิ่ม Page Number
+    pageNumber?: number;
     ai_summary?: string;
     key_change?: string;
+    diff_versions?: {
+        ai_ocr?: string;
+        legacy_json?: string;
+    };
 }
 
-// --- Rich Data Interfaces (match JSON structure) ---
+// --- Rich Data Interfaces (match JSON structure from Backend) ---
 export interface RichSection {
-    section_number: string;
+    id: string;
     content: string;
-    category_id: string;
+    type: string;
     status: string;
     similarity: number;
+    category_id: string;
+    diff_versions?: {
+        ai_ocr: string;
+        legacy_json: string;
+    };
 }
 
 export interface RichCategory {
@@ -61,7 +69,7 @@ export interface ConstitutionMeta {
     id: string;
     name: string;
     year: number;
-    pages: PageRatio[][]; // Updated to strict type
+    pages: PageRatio[][];
 }
 
 export interface ConstitutionContent {
@@ -74,36 +82,34 @@ export interface ConstitutionContent {
 // Helper: แปลง Rich JSON เป็น Flat List
 const transformRichData = (richData: RichCategory[], id: string, name: string) => {
     const flatSections: SectionContent[] = [];
-    // Mapping format: Array of last section numbers per page.
-    // Index 0 = Page 1, Index 1 = Page 2, etc.
     const pageMapping: number[] = PDF_PAGE_MAPPING[id] || [];
 
     if (Array.isArray(richData)) {
         richData.forEach((cat: RichCategory) => {
             if (cat.sections) {
                 cat.sections.forEach((sec: RichSection) => {
-                    const secId = parseInt(sec.section_number);
+                    const numericPart = sec.id.match(/\d+/);
+                    const secId = numericPart ? parseInt(numericPart[0]) : 0;
 
-                    // Logic: Find the first page where this section is <= the page's last section
                     let pageNum = 1;
-                    if (!isNaN(secId) && pageMapping.length > 0) {
+                    if (secId > 0 && pageMapping.length > 0) {
                         const foundIndex = pageMapping.findIndex(lastSec => secId <= lastSec);
                         if (foundIndex !== -1) {
-                            pageNum = foundIndex + 1; // 0-based index -> 1-based page
+                            pageNum = foundIndex + 1;
                         } else {
-                            // If greater than the last mapped section, assume it's on the next page(s)
-                            // or just default to the last known page + 1 (or allow it to overflow)
                             pageNum = pageMapping.length + 1;
                         }
                     }
 
                     flatSections.push({
-                        id: sec.section_number,
+                        id: sec.id,
                         content: sec.content,
                         chapter_name: cat.category_name,
                         category_id: cat.category_id,
                         status: sec.status,
+                        type: sec.type,
                         similarity: sec.similarity,
+                        diff_versions: sec.diff_versions,
                         pageNumber: pageNum,
                         ai_summary: cat.ai_summary,
                         key_change: cat.key_change
@@ -130,19 +136,20 @@ export const getConstitutionData = (id: string) => {
         case 'con2475temp':
             name = "พระราชบัญญัติธรรมนูญฯ ๒๔๗๕ (ชั่วคราว)";
             year = 2475;
-            content = transformRichData(rich2475Temp, id, name);
+            content = transformRichData(rich2475Temp as RichCategory[], id, name);
             break;
 
         case 'con2475':
             name = "รัฐธรรมนูญแห่งราชอาณาจักรสยาม ๒๔๗๕";
             year = 2475;
-            content = transformRichData(rich2475Perm, id, name);
+            content = transformRichData(rich2475Perm as RichCategory[], id, name);
             break;
 
         case 'con2489':
             name = "รัฐธรรมนูญแห่งราชอาณาจักรไทย ๒๔๘๙";
             year = 2489;
-            content = transformRichData(rich2489Perm, id, name);
+            // ⚠️ อย่าลืม Import rich2489Perm หรือใช้ [] ถ้ายังไม่มีไฟล์
+            content = transformRichData([], id, name);
             break;
 
         default:
@@ -161,7 +168,7 @@ export const getConstitutionData = (id: string) => {
         }));
     }
 
-    // คำนวณ Ratio ตามความยาวตัวอักษรจริง
+    // 4. คำนวณ Page Ratio (DNA Bar)
     const totalPages = PDF_TOTAL_PAGES[id] || 10;
 
     // Calculate total character count
@@ -169,11 +176,13 @@ export const getConstitutionData = (id: string) => {
     const catLengths: Record<string, number> = {};
 
     content?.sections.forEach(sec => {
-        const len = sec.content.length;
-        totalLength += len;
+        if (sec.type === 'section' || !sec.type) {
+            const len = sec.content.length;
+            totalLength += len;
 
-        const catId = sec.category_id || 'uncategorized';
-        catLengths[catId] = (catLengths[catId] || 0) + len;
+            const catId = sec.category_id || 'uncategorized';
+            catLengths[catId] = (catLengths[catId] || 0) + len;
+        }
     });
 
     //simple ratio
@@ -183,10 +192,13 @@ export const getConstitutionData = (id: string) => {
     if (totalLength > 0) {
         Object.keys(catLengths).forEach(catId => {
             const ratio = (catLengths[catId] / totalLength) * totalPages;
-            calculatedPages[0].push({
-                categoryId: catId,
-                pageRatio: ratio
-            });
+
+            if (calculatedPages[0]) {
+                calculatedPages[0].push({
+                    categoryId: catId,
+                    pageRatio: ratio
+                });
+            }
         });
     }
 
