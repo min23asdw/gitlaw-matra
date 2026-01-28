@@ -1,8 +1,4 @@
-pymongo
-pdfplumber
 requests
 python-dotenv
 google-genai
-easyocr
 tqdm
-openai

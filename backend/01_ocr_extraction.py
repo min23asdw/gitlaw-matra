@@ -5,17 +5,19 @@ import logging
 import time
 import re
 from difflib import SequenceMatcher
-from config import OPENROUTER_API_KEY
 from merger import ConstitutionMerger 
 
 # --- Config ---
-TARGET_CONST_ID = "con2475"
-IMAGE_FOLDER = "images_raw"
-LEGACY_JSON = os.path.join("legacy_json", "constitutions.json")
-IMAGES_PER_BATCH = 3
-CHECKPOINT_FILE = f"{TARGET_CONST_ID}_checkpoint.json"
-OUTPUT_DIR_CLEAN = os.path.join("json_output", "clean")
-FINAL_FILE = os.path.join(OUTPUT_DIR_CLEAN, f"{TARGET_CONST_ID}_clean.json")
+from config import (
+    OPENROUTER_API_KEY, 
+    TARGET_CONST_ID, 
+    IMAGE_FOLDER, 
+    LEGACY_JSON,
+    IMAGES_PER_BATCH,
+    CHECKPOINT_FILE,
+    OUTPUT_DIR_CLEAN,
+    FILE_CLEAN
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
@@ -49,7 +51,9 @@ def calculate_similarity(a, b):
 
 def get_numeric_id(sec_id):
     try:
-        return int(re.search(r"\d+", str(sec_id)).group())
+        # พยายามแปลงทั้งเลขไทยและอารบิก
+        clean_id = str(sec_id).translate(str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789"))
+        return int(re.search(r"\d+", clean_id).group())
     except:
         return None
 
@@ -68,6 +72,9 @@ def smart_heal_sequence(items):
 
     print(f"🔍 ตรวจพบเลขที่หายไป: {missing_ids}")
 
+    # Flag เพื่อเช็คว่าเจอ Intro ตัวแรกไปหรือยัง
+    first_intro_processed = False
+
     for i in range(len(items)):
         curr = items[i]
         curr_id_str = str(curr.get("id", "")).strip()
@@ -76,9 +83,44 @@ def smart_heal_sequence(items):
         # Merge Intro
         is_intro = curr_id_str.lower() == "intro" or not curr_id_str
         if is_intro:
-            if healed_items: 
+            if healed_items and first_intro_processed: 
+                # ถ้าไม่ใช่ตัวแรก ให้รวมกับตัวก่อนหน้า (Continuation)
                 print(f"   🔗 พบ intro/continuation -> รวมเข้ากับมาตรา {healed_items[-1]['id']}")
                 healed_items[-1]["content"] += " " + curr.get("content", "")
+            else:
+                # FIX: ถ้าเป็น Intro ตัวแรกสุด ให้เช็คว่ามี 'หมวด' ซ่อนอยู่ไหม?
+                content = curr.get("content", "")
+                
+                # Regex หาคำว่า "หมวด..." ที่อยู่ท้ายข้อความ
+                match = re.search(r"(หมวด\s*[๐-๙0-9]+.*?)$", content, re.DOTALL)
+                
+                if match:
+                    print(f"   ✂️ แยก Header ออกจาก Intro แรก...")
+                    header_text = match.group(1).strip()
+                    intro_content = content[:match.start()].strip()
+                    
+                    # 1. เก็บ Intro ที่ตัดแล้ว
+                    curr["content"] = intro_content
+                    healed_items.append(curr)
+                    
+                    # 2. สร้าง Header ใหม่แทรกเข้าไป
+                    try:
+                        cat_num = get_numeric_id(header_text) or 1
+                    except:
+                        cat_num = 1
+                        
+                    header_item = {
+                        "id": f"header_{cat_num}", 
+                        "content": header_text,
+                        "type": "header",
+                        "status": "OCR"
+                    }
+                    healed_items.append(header_item)
+                else:
+                    # ถ้าไม่มีหมวด ก็เก็บ Intro ไว้เฉยๆ
+                    healed_items.append(curr)
+                
+                first_intro_processed = True
             continue 
 
         # Fix Sequence
@@ -157,11 +199,24 @@ def main():
     
     def sort_key(x):
         s = str(x["id"])
+        
+        # Intro อยู่บนสุด
+        if s.lower() == "intro": return -1.0
+        
+        # Header แทรกกลาง (header_after_7 -> 7.5)
+        if s.startswith("header_after_"):
+            try: return float(s.replace("header_after_", "")) + 0.5 
+            except: return 9999.5 
+        
+        # Header ปกติ (header_1 -> 0.9)
         if s.startswith("header_"): 
             try: return float(s.replace("header_", "")) - 0.1
             except: return 0
+            
+        # มาตราปกติ
         try: return float(s)
         except: return 9999
+
     final_list.sort(key=sort_key)
 
     # --- 🔥 PHASE 3: FINAL CLEANUP & COMPARISON ---
@@ -192,10 +247,10 @@ def main():
                 item["status"] = "REVIEW_NEEDED"
 
     os.makedirs(OUTPUT_DIR_CLEAN, exist_ok=True)
-    with open(FINAL_FILE, "w", encoding="utf-8") as f:
+    with open(FILE_CLEAN, "w", encoding="utf-8") as f:
         json.dump(final_list, f, ensure_ascii=False, indent=2)
     
-    print(f"\n🎉 DONE! Saved {len(final_list)} sections to {FINAL_FILE}")
+    print(f"\n🎉 DONE! Saved {len(final_list)} sections to {FILE_CLEAN}")
 
 if __name__ == "__main__":
     main()

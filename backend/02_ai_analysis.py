@@ -9,14 +9,13 @@ from agents import AgentSummarizer
 from config import GOOGLE_API_KEY, CATEGORIES
 
 # --- Config ---
-TARGET_CONST_ID = "con2475"
-
-OUTPUT_DIR_CLEAN = os.path.join("json_output", "clean")
-OUTPUT_DIR_FINAL = os.path.join("json_output", "final")
-
-FILE_CLEAN = os.path.join(OUTPUT_DIR_CLEAN, f"{TARGET_CONST_ID}_clean.json")
-FILE_FINAL_SUMMARY = os.path.join(
-    OUTPUT_DIR_FINAL, f"{TARGET_CONST_ID}_full_summary.json"
+from config import (
+    GOOGLE_API_KEY, 
+    CATEGORIES,
+    TARGET_CONST_ID,
+    OUTPUT_DIR_FINAL,
+    FILE_CLEAN,
+    FILE_FINAL_SUMMARY
 )
 
 # Setup Logging
