@@ -8,8 +8,8 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 TYPHOON_OCR_API_KEY = os.getenv("TYPHOON_OCR_API_KEY")
 
-# --- ⚙️ PROJECT SETTINGS (แก้ที่นี่ทีเดียว!) ---
-TARGET_CONST_ID = "con2475"  # 👈 เปลี่ยนปีตรงนี้ที่เดียวจบ
+# --- ⚙️ PROJECT SETTINGS ---
+TARGET_CONST_ID = "con2560"  #
 
 # --- 📂 PATH CONFIGURATION ---
 # โฟลเดอร์ต้นทาง
