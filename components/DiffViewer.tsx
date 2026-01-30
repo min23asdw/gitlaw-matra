@@ -114,12 +114,12 @@ function DiffViewerComponent({ leftSections, rightSections, onJumpToPage, forceM
     }, [targetCategory, groupedRows]);
     const [expandedState, setExpandedState] = React.useState<Record<string, boolean>>({});
 
-    const toggleSection = React.useCallback((id: string) => {
-        setExpandedState(prev => ({ ...prev, [id]: !prev[id] }));
+    const toggleSection = React.useCallback((title: string) => {
+        setExpandedState(prev => ({ ...prev, [title]: !prev[title] }));
     }, []);
 
-    // Also reset expanded state when data changes if needed, 
-    // but preserving it might be better. 
+    // Also reset expanded state when data changes if needed,
+    // but preserving it might be better.
     // However, if sections change completely, we might want to reset.
     // For now, let's keep it simple.
 
@@ -147,8 +147,8 @@ function DiffViewerComponent({ leftSections, rightSections, onJumpToPage, forceM
                                 group={group}
                                 onJumpToPage={onJumpToPage}
                                 forceMobileMode={forceMobileMode}
-                                isExpanded={!!expandedState[group.id]}
-                                onToggle={() => toggleSection(group.id)}
+                                isExpanded={!!expandedState[group.title]}
+                                onToggle={toggleSection}
                             />
                         </div>
                     )}

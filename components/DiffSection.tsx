@@ -98,7 +98,7 @@ const DiffSection = React.memo(({ group, onJumpToPage, forceMobileMode, isExpand
     onJumpToPage?: (p: number, s: 'left' | 'right') => void;
     forceMobileMode: boolean;
     isExpanded: boolean;
-    onToggle: () => void;
+    onToggle: (id: string) => void;
 }) => {
     const firstRow = group.rows[0];
     const rowCount = group.rows.length;
@@ -109,16 +109,32 @@ const DiffSection = React.memo(({ group, onJumpToPage, forceMobileMode, isExpand
 
     const classGroupItem = "space-y-1 relative z-0 mt-2";
 
+    // Memoize Activity Cells to prevent frequent recalculation during expansion animations
+    const activityCells = React.useMemo(() => {
+        return group.rows.slice(0, 120).map((row, i) => {
+            let colorClass = "bg-slate-200"; // MATCH
+            if (row.status === 'ADD') colorClass = "bg-emerald-400";
+            else if (row.status === 'REMOVE') colorClass = "bg-rose-400";
+            else if (row.status === 'MODIFIED') colorClass = "bg-amber-400";
+
+            return (
+                <div key={i} className={`w-2.5 h-2.5 rounded-[2px] ${colorClass} opacity-90`} />
+            );
+        });
+    }, [group.rows]);
+
+    const handleToggle = React.useCallback(() => onToggle(group.title), [onToggle, group.title]);
+
     return (
-        <section key={`section-${group.id}`} className="relative mb-8 pt-8">
+        <section key={`section-${group.id}`} className="relative">
             {/* --- Sticky Header (Cleaned up) --- */}
             <div
                 className={`
-                    sticky z-30 py-3 px-0 
+                    sticky z-30 px-0 
                     bg-slate-50/95 backdrop-blur-sm
                     transition-all duration-200 top-0 cursor-pointer group/header
                 `}
-                onClick={onToggle}
+                onClick={handleToggle}
             >
                 <div className="flex items-center gap-4">
                     <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent"></div>
@@ -145,56 +161,77 @@ const DiffSection = React.memo(({ group, onJumpToPage, forceMobileMode, isExpand
                 </div>
             </div>
 
-            {isExpanded && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-
-                    {/* --- Semantic Analysis Area (AI Summary & Key Change) --- */}
-                    {(hasAiContent || hasKeyChange) && (
-                        <div className={`mt-4 mb-8 flex flex-col gap-6 ${forceMobileMode ? '' : 'mx-4 md:mx-8'}`}>
-
-                            {/* AI Summary Block */}
-                            <SemanticBlock
-                                title="AI Summary"
-                                iconColor="text-blue-600 bg-blue-100"
-                                iconPath={
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                }
-                                leftText={firstRow.leftAiSummary}
-                                rightText={firstRow.rightAiSummary}
-                                fallbackText={firstRow.aiSummary}
-                                forceMobileMode={forceMobileMode}
-                            />
-
-                            {/* Key Change Block */}
-                            <SemanticBlock
-                                title="Key Change"
-                                iconColor="text-amber-600 bg-amber-100"
-                                iconPath={
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                }
-                                leftText={firstRow.leftKeyChange}
-                                rightText={firstRow.rightKeyChange}
-                                fallbackText={firstRow.keyChange}
-                                forceMobileMode={forceMobileMode}
-                            />
-
+            {/* --- Activity Cells (Collapsed State) --- */}
+            {!isExpanded && (
+                <div
+                    className="mx-4 md:mx-0 mt-2 p-3 bg-slate-50/40 border border-slate-100/50 rounded-xl flex flex-col items-center gap-2 cursor-pointer hover:bg-slate-50 hover:border-blue-100 transition-all group/activity"
+                    onClick={handleToggle}
+                    title="Click to expand"
+                >
+                    <div className="grid grid-cols-10 gap-1">
+                        {activityCells}
+                    </div>
+                    {group.rows.length > 120 && (
+                        <div className="text-[10px] text-slate-400 font-mono self-center">
+                            +{group.rows.length - 120} more...
                         </div>
                     )}
+                </div>
+            )}
 
-                    {/* --- Content Rows --- */}
-                    <div className={classGroupItem}>
-                        {group.rows.map(row => (
-                            <DiffRowItem
-                                key={row.key}
-                                row={row}
-                                onJumpToPage={onJumpToPage}
-                                forceMobileMode={forceMobileMode}
-                            />
-                        ))}
+            {/* --- Main Content (Expanded State) --- */}
+            {isExpanded && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="min-h-0">
+
+                        {/* --- Semantic Analysis Area (AI Summary & Key Change) --- */}
+                        {(hasAiContent || hasKeyChange) && (
+                            <div className={`mt-4 mb-8 flex flex-col gap-6 ${forceMobileMode ? '' : 'mx-4 md:mx-8'}`}>
+
+                                {/* AI Summary Block */}
+                                <SemanticBlock
+                                    title="AI Summary"
+                                    iconColor="text-blue-600 bg-blue-100"
+                                    iconPath={
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                    }
+                                    leftText={firstRow.leftAiSummary}
+                                    rightText={firstRow.rightAiSummary}
+                                    fallbackText={firstRow.aiSummary}
+                                    forceMobileMode={forceMobileMode}
+                                />
+
+                                {/* Key Change Block */}
+                                <SemanticBlock
+                                    title="Key Change"
+                                    iconColor="text-amber-600 bg-amber-100"
+                                    iconPath={
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                    }
+                                    leftText={firstRow.leftKeyChange}
+                                    rightText={firstRow.rightKeyChange}
+                                    fallbackText={firstRow.keyChange}
+                                    forceMobileMode={forceMobileMode}
+                                />
+
+                            </div>
+                        )}
+
+                        {/* --- Content Rows --- */}
+                        <div className={classGroupItem}>
+                            {group.rows.map(row => (
+                                <DiffRowItem
+                                    key={row.key}
+                                    row={row}
+                                    onJumpToPage={onJumpToPage}
+                                    forceMobileMode={forceMobileMode}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
