@@ -6,7 +6,6 @@ import ConceptDiff from '@/components/ConceptDiff';
 import WelcomeHero from '@/components/WelcomeHero';
 import dynamic from 'next/dynamic';
 
-// ✅ 1. ใช้ React.memo กับ Layout เพื่อป้องกันการ Render ซ้ำตอน isLoading เปลี่ยน
 const LiquidPDFLayout = dynamic(() => import('@/components/LiquidPDFLayout'), { ssr: false });
 const MemoizedLayout = React.memo(LiquidPDFLayout);
 
@@ -23,7 +22,7 @@ export default function DeepLinkView({
     initialLeftData,
     initialRightData
 }: Props) {
-    // State UI (Dropdown & URL) - แยกออกจาก Data เพื่อความลื่น
+    // State UI (Dropdown & URL)
     const [leftId, setLeftId] = useState(initialLeftId);
     const [rightId, setRightId] = useState(initialRightId);
 
@@ -34,21 +33,19 @@ export default function DeepLinkView({
     const [isLoading, setIsLoading] = useState(false);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
-    // กัน Race Condition (กดรัวๆ แล้วข้อมูลอันเก่ามาทับอันใหม่)
+    // กัน Race Condition
     const activeRequest = useRef<string>("");
 
     const allConstitutions = useMemo(() => getAllConstitutions(), []);
 
     const updateComparison = async (newLeftId: string, newRightId: string) => {
-        // ✅ 2. Optimistic Update: เปลี่ยน UI ทันที ไม่ต้องรอ fetch
         setLeftId(newLeftId);
         setRightId(newRightId);
 
-        // เปลี่ยน URL ทันที
         const newUrl = `/${newLeftId}-vs-${newRightId}`;
         window.history.pushState(null, '', newUrl);
 
-        // ถ้าข้อมูลมีอยู่แล้ว ไม่ต้องโหลดใหม่ (Cache check ง่ายๆ)
+        // (Cache check)
         if (newLeftId === leftData.meta.id && newRightId === rightData.meta.id) {
             return;
         }
@@ -64,14 +61,12 @@ export default function DeepLinkView({
 
             const [newLeftData, newRightData] = await Promise.all([leftPromise, rightPromise]);
 
-            // ✅ 3. Race Condition Check: ถ้า Request นี้เก่ากว่าล่าสุด ให้ทิ้งไปเลย
             if (activeRequest.current === requestId) {
                 setLeftData(newLeftData);
                 setRightData(newRightData);
             }
         } catch (error) {
             console.error("Error swapping constitution:", error);
-            // ถ้า Error อาจจะ Rollback UI กลับ (Optional)
         } finally {
             if (activeRequest.current === requestId) {
                 setIsLoading(false);
@@ -103,7 +98,6 @@ export default function DeepLinkView({
             const parts = path.split('-vs-');
             if (parts.length === 2) {
                 const [l, r] = parts;
-                // Back Button ก็ต้อง update แบบ Optimistic
                 setLeftId(l);
                 setRightId(r);
                 setIsLoading(true);
@@ -131,14 +125,14 @@ export default function DeepLinkView({
                 )}
 
                 <ConceptDiff
-                    leftMeta={leftData.meta} // ⚠️ สังเกต: Header ยังโชว์ Meta เก่าแป๊บนึงจนกว่า Data ใหม่จะมา (ยอมรับได้แลกกับความลื่น)
+                    leftMeta={leftData.meta}
                     rightMeta={rightData.meta}
                     categories={leftData.categories}
                     isCollapsed={isHeaderCollapsed}
                     onToggleCollapse={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
-                    leftId={leftId}     // UI เปลี่ยนทันที
+                    leftId={leftId}
                     setLeftId={handleLeftChange}
-                    rightId={rightId}   // UI เปลี่ยนทันที
+                    rightId={rightId}
                     setRightId={handleRightChange}
                     allConstitutions={allConstitutions}
                 />
@@ -146,7 +140,7 @@ export default function DeepLinkView({
 
             <div id="workspace" className="flex-1 overflow-hidden flex flex-col relative min-h-0">
                 <div className="flex-1 min-h-0">
-                    {/* ใช้ Memoized Component */}
+                    {/* Memoized Component */}
                     <MemoizedLayout
                         leftData={leftData.content}
                         rightData={rightData.content}
