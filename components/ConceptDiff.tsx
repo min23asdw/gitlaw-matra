@@ -18,22 +18,23 @@ interface Props {
     allConstitutions: Constitution[];
 }
 
+// 1. Calculate "Weight" of each category (Total Page Ratio)
+const calculateWeight = (meta: ConstitutionMeta) => {
+    const weights: Record<string, number> = {};
+    meta.pages.flat().forEach(p => {
+        weights[p.categoryId] = (weights[p.categoryId] || 0) + p.pageRatio;
+    });
+    // Convert to % relative to total pages
+    Object.keys(weights).forEach(k => {
+        weights[k] = (weights[k] / meta.pageCount) * 100;
+    });
+    return weights;
+};
+
 function ConceptDiff({
     leftMeta, rightMeta, categories, isCollapsed, onToggleCollapse,
     leftId, setLeftId, rightId, setRightId, allConstitutions
 }: Props) {
-    // 1. Calculate "Weight" of each category (Total Page Ratio)
-    const calculateWeight = (meta: ConstitutionMeta) => {
-        const weights: Record<string, number> = {};
-        meta.pages.flat().forEach(p => {
-            weights[p.categoryId] = (weights[p.categoryId] || 0) + p.pageRatio;
-        });
-        // Convert to % relative to total pages
-        Object.keys(weights).forEach(k => {
-            weights[k] = (weights[k] / meta.pageCount) * 100;
-        });
-        return weights;
-    };
 
     const leftWeights = useMemo(() => calculateWeight(leftMeta), [leftMeta]);
     const rightWeights = useMemo(() => calculateWeight(rightMeta), [rightMeta]);
