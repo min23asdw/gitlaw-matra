@@ -1,23 +1,3 @@
-import rich2475Perm from '@/backend/json_output/final/con2475_full_summary.json';
-import rich2475Temp from '@/backend/json_output/final/con2475temp_full_summary.json';
-import rich2489Perm from '@/backend/json_output/final/con2489_full_summary.json';
-import rich2490Temp from '@/backend/json_output/final/con2490temp_full_summary.json';
-import rich2492Perm from '@/backend/json_output/final/con2492_full_summary.json';
-import rich2495Perm from '@/backend/json_output/final/con2495_full_summary.json';
-import rich2502Temp from '@/backend/json_output/final/con2502temp_full_summary.json';
-import rich2511Perm from '@/backend/json_output/final/con2511_full_summary.json';
-import rich2515Temp from '@/backend/json_output/final/con2515temp_full_summary.json';
-import rich2517Perm from '@/backend/json_output/final/con2517_full_summary.json';
-import rich2519Temp from '@/backend/json_output/final/con2519temp_full_summary.json';
-import rich2520Temp from '@/backend/json_output/final/con2520temp_full_summary.json';
-import rich2521Perm from '@/backend/json_output/final/con2521_full_summary.json';
-import rich2534Perm from '@/backend/json_output/final/con2534_full_summary.json';
-import rich2534Temp from '@/backend/json_output/final/con2534temp_full_summary.json';
-import rich2540Perm from '@/backend/json_output/final/con2540_full_summary.json';
-import rich2549Temp from '@/backend/json_output/final/con2549temp_full_summary.json';
-import rich2550Perm from '@/backend/json_output/final/con2550_full_summary.json';
-import rich2557Temp from '@/backend/json_output/final/con2557temp_full_summary.json';
-import rich2560Perm from '@/backend/json_output/final/con2560_full_summary.json';
 
 import { CATEGORY_COLORS } from '@/utils/categoryColors';
 import { PDF_PAGE_MAPPING, PDF_TOTAL_PAGES } from '@/mapping/pdfPageMapping';
@@ -167,7 +147,14 @@ const transformRichData = (richData: RichCategory[], id: string, name: string) =
     };
 };
 
-export const getConstitutionData = (id: string) => {
+// Return type with meta and content separated, to allow easier partial loading if needed
+export interface ConstitutionData {
+    meta: ConstitutionMeta;
+    content: ConstitutionContent;
+    categories: CategoryOverview[];
+}
+
+export const fetchConstitutionData = async (id: string): Promise<ConstitutionData> => {
     // 1. Find config
     const config = CONSTITUTIONS.find(c => c.id === id);
     const name = config ? config.name : "Unknown";
@@ -175,29 +162,34 @@ export const getConstitutionData = (id: string) => {
 
     let richData: RichCategory[] = [];
 
-    // 2. Select Rich Data
-    switch (id) {
-        case 'con2475temp': richData = rich2475Temp as RichCategory[]; break;
-        case 'con2475': richData = rich2475Perm as RichCategory[]; break;
-        case 'con2489': richData = rich2489Perm as RichCategory[]; break;
-        case 'con2490temp': richData = rich2490Temp as RichCategory[]; break;
-        case 'con2492': richData = rich2492Perm as RichCategory[]; break;
-        case 'con2495': richData = rich2495Perm as RichCategory[]; break;
-        case 'con2502temp': richData = rich2502Temp as RichCategory[]; break;
-        case 'con2511': richData = rich2511Perm as RichCategory[]; break;
-        case 'con2515temp': richData = rich2515Temp as RichCategory[]; break;
-        case 'con2517': richData = rich2517Perm as RichCategory[]; break;
-        case 'con2519temp': richData = rich2519Temp as RichCategory[]; break;
-        case 'con2520temp': richData = rich2520Temp as RichCategory[]; break;
-        case 'con2521': richData = rich2521Perm as RichCategory[]; break;
-        case 'con2534': richData = rich2534Perm as RichCategory[]; break;
-        case 'con2534temp': richData = rich2534Temp as RichCategory[]; break;
-        case 'con2540': richData = rich2540Perm as RichCategory[]; break;
-        case 'con2549temp': richData = rich2549Temp as RichCategory[]; break;
-        case 'con2550': richData = rich2550Perm as RichCategory[]; break;
-        case 'con2557temp': richData = rich2557Temp as RichCategory[]; break;
-        case 'con2560': richData = rich2560Perm as RichCategory[]; break;
-        default: richData = []; break;
+    // 2. Select Rich Data with Dynamic Import
+    try {
+        switch (id) {
+            case 'con2475temp': richData = (await import('@/backend/json_output/final/con2475temp_full_summary.json')).default as RichCategory[]; break;
+            case 'con2475': richData = (await import('@/backend/json_output/final/con2475_full_summary.json')).default as RichCategory[]; break;
+            case 'con2489': richData = (await import('@/backend/json_output/final/con2489_full_summary.json')).default as RichCategory[]; break;
+            case 'con2490temp': richData = (await import('@/backend/json_output/final/con2490temp_full_summary.json')).default as RichCategory[]; break;
+            case 'con2492': richData = (await import('@/backend/json_output/final/con2492_full_summary.json')).default as RichCategory[]; break;
+            case 'con2495': richData = (await import('@/backend/json_output/final/con2495_full_summary.json')).default as RichCategory[]; break;
+            case 'con2502temp': richData = (await import('@/backend/json_output/final/con2502temp_full_summary.json')).default as RichCategory[]; break;
+            case 'con2511': richData = (await import('@/backend/json_output/final/con2511_full_summary.json')).default as RichCategory[]; break;
+            case 'con2515temp': richData = (await import('@/backend/json_output/final/con2515temp_full_summary.json')).default as RichCategory[]; break;
+            case 'con2517': richData = (await import('@/backend/json_output/final/con2517_full_summary.json')).default as RichCategory[]; break;
+            case 'con2519temp': richData = (await import('@/backend/json_output/final/con2519temp_full_summary.json')).default as RichCategory[]; break;
+            case 'con2520temp': richData = (await import('@/backend/json_output/final/con2520temp_full_summary.json')).default as RichCategory[]; break;
+            case 'con2521': richData = (await import('@/backend/json_output/final/con2521_full_summary.json')).default as RichCategory[]; break;
+            case 'con2534': richData = (await import('@/backend/json_output/final/con2534_full_summary.json')).default as RichCategory[]; break;
+            case 'con2534temp': richData = (await import('@/backend/json_output/final/con2534temp_full_summary.json')).default as RichCategory[]; break;
+            case 'con2540': richData = (await import('@/backend/json_output/final/con2540_full_summary.json')).default as RichCategory[]; break;
+            case 'con2549temp': richData = (await import('@/backend/json_output/final/con2549temp_full_summary.json')).default as RichCategory[]; break;
+            case 'con2550': richData = (await import('@/backend/json_output/final/con2550_full_summary.json')).default as RichCategory[]; break;
+            case 'con2557temp': richData = (await import('@/backend/json_output/final/con2557temp_full_summary.json')).default as RichCategory[]; break;
+            case 'con2560': richData = (await import('@/backend/json_output/final/con2560_full_summary.json')).default as RichCategory[]; break;
+            default: richData = []; break;
+        }
+    } catch (e) {
+        console.error(`Error loading constitution data for ${id}:`, e);
+        richData = [];
     }
 
     const content = transformRichData(richData, id, name);
@@ -246,9 +238,6 @@ export const getConstitutionData = (id: string) => {
         });
     }
 
-    // Use year from config, allowing string or number in interface, but cast carefully if needed.
-    // The interface says year: number | string, but RichCategory says number. 
-    // We already set year = config.year (number) or 0.
     const meta: ConstitutionMeta = {
         id,
         name,
@@ -258,6 +247,13 @@ export const getConstitutionData = (id: string) => {
     };
 
     return { meta, content, categories };
+};
+
+// Deprecated: kept for compatibility if needed, but should upgrade to async
+export const getConstitutionData = (id: string) => {
+    // This function can no longer be synchronous if we want dynamic imports. 
+    // We'll throw an error to force upgrade.
+    throw new Error("getConstitutionData is deprecated. Use fetchConstitutionData instead.");
 };
 
 export const getAllConstitutions = () => {

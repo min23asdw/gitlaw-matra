@@ -89,7 +89,14 @@ function ConceptDiff({
                                         className="appearance-none bg-transparent font-bold text-sm text-slate-800 w-full cursor-pointer hover:text-blue-700 focus:outline-none py-2 pl-3 pr-8 truncate transition-colors"
                                     >
                                         {allConstitutions.map(c => (
-                                            <option key={c.id} value={c.id}>{c.year} - {c.name}</option>
+                                            <option
+                                                key={c.id}
+                                                value={c.id}
+                                                disabled={c.id === rightId}
+                                                className={c.id === rightId ? "text-gray-300" : ""}
+                                            >
+                                                {c.year} - {c.name} {c.id === rightId ? "(เลือกอยู่ฝั่งขวา)" : ""}
+                                            </option>
                                         ))}
                                     </select>
                                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover/select:text-blue-500 pointer-events-none transition-colors" />
@@ -144,7 +151,14 @@ function ConceptDiff({
                                         className="appearance-none bg-transparent font-bold text-sm text-slate-800 w-full cursor-pointer hover:text-blue-700 focus:outline-none py-2 pl-3 md:pl-8 pr-3 truncate transition-colors md:text-right md:dir-rtl"
                                     >
                                         {allConstitutions.map(c => (
-                                            <option key={c.id} value={c.id}>{c.year} - {c.name}</option>
+                                            <option
+                                                key={c.id}
+                                                value={c.id}
+                                                disabled={c.id === leftId}
+                                                className={c.id === leftId ? "text-gray-300" : ""}
+                                            >
+                                                {c.year} - {c.name} {c.id === leftId ? "(เลือกอยู่ฝั่งซ้าย)" : ""}
+                                            </option>
                                         ))}
                                     </select>
                                     <ChevronDown size={16} className="absolute right-3 md:left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover/select:text-blue-500 pointer-events-none transition-colors" />
