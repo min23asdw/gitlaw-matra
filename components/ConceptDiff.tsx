@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { CategoryOverview, ConstitutionMeta, Constitution } from '@/utils/dataLoader';
 import { CATEGORY_ORDER } from '@/types';
 import { CATEGORY_COLORS } from '@/utils/categoryColors';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, ArrowLeftRight } from 'lucide-react';
 
 interface Props {
     leftMeta: ConstitutionMeta;
@@ -19,6 +19,7 @@ interface Props {
     allConstitutions: Constitution[];
     // Interactivity
     onCategoryClick?: (id: string) => void;
+    onSwap?: () => void;
 }
 
 // 1. Calculate "Weight" of each category (Total Page Ratio)
@@ -47,8 +48,12 @@ const calculateWeight = (meta: ConstitutionMeta) => {
 
 function ConceptDiff({
     leftMeta, rightMeta, isCollapsed, onToggleCollapse,
-    leftId, setLeftId, rightId, setRightId, allConstitutions, onCategoryClick
+    leftId, setLeftId, rightId, setRightId, allConstitutions, onCategoryClick, onSwap
 }: Props) {
+
+    const isCon2495Involved = leftId === 'con2495' || rightId === 'con2495';
+    const lockLeftTo2475 = rightId === 'con2495';
+    const lockRightTo2475 = leftId === 'con2495';
 
     const leftWeights = useMemo(() => calculateWeight(leftMeta), [leftMeta]);
     const rightWeights = useMemo(() => calculateWeight(rightMeta), [rightMeta]);
@@ -107,13 +112,15 @@ function ConceptDiff({
                                     <select
                                         value={leftId}
                                         onChange={(e) => setLeftId(e.target.value)}
+                                        aria-label="เลือกฉบับฝั่งซ้าย"
+                                        title="เลือกฉบับฝั่งซ้าย"
                                         className="appearance-none bg-transparent font-bold text-sm text-slate-800 w-full cursor-pointer hover:text-blue-700 focus:outline-none py-2 pl-3 pr-8 truncate transition-colors"
                                     >
                                         {allConstitutions.map(c => (
                                             <option
                                                 key={c.id}
                                                 value={c.id}
-                                                disabled={c.id === rightId}
+                                                disabled={lockLeftTo2475 ? c.id !== 'con2475' : c.id === rightId}
                                                 className={c.id === rightId ? "text-gray-300" : ""}
                                             >
                                                 {c.year} - {c.name} {c.id === rightId ? "(เลือกอยู่ฝั่งขวา)" : ""}
@@ -155,8 +162,32 @@ function ConceptDiff({
                             <div className="hidden md:flex absolute inset-0 items-center justify-center">
                                 <div className="h-full w-px bg-slate-200"></div>
                             </div>
-                            <div className="hidden md:flex relative z-10 bg-white rounded-full p-1.5 border border-slate-100 shadow-sm text-[10px] font-black text-slate-400">
-                                VS
+                            <div className="relative z-10 flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (isCon2495Involved) return;
+                                        if (leftId === rightId) return;
+                                        if (onSwap) {
+                                            onSwap();
+                                            return;
+                                        }
+                                        const nextLeft = rightId;
+                                        const nextRight = leftId;
+                                        setLeftId(nextLeft);
+                                        setRightId(nextRight);
+                                    }}
+                                    className="bg-white rounded-full p-2 border border-slate-100 shadow-sm cursor-pointer text-slate-500 hover:text-blue-600 hover:shadow-md transition-all disabled:bg-red-300 disabled:text-red-500 disabled:cursor-not-allowed"
+                                    aria-label="สลับรัฐธรรมนูญฝั่งซ้ายและขวา"
+                                    title="สลับฝั่งซ้าย/ขวา"
+                                    disabled={isCon2495Involved}
+                                >
+                                    <ArrowLeftRight size={16} />
+                                </button>
+
+                                <div className="hidden md:flex bg-white rounded-full px-2 py-1 border border-slate-100 shadow-sm text-[10px] font-black text-slate-400">
+                                    VS
+                                </div>
                             </div>
                         </div>
 
@@ -169,13 +200,15 @@ function ConceptDiff({
                                     <select
                                         value={rightId}
                                         onChange={(e) => setRightId(e.target.value)}
+                                        aria-label="เลือกฉบับฝั่งขวา"
+                                        title="เลือกฉบับฝั่งขวา"
                                         className="appearance-none bg-transparent font-bold text-sm text-slate-800 w-full cursor-pointer hover:text-blue-700 focus:outline-none py-2 pl-3 md:pl-8 pr-3 truncate transition-colors md:text-right md:dir-rtl"
                                     >
                                         {allConstitutions.map(c => (
                                             <option
                                                 key={c.id}
                                                 value={c.id}
-                                                disabled={c.id === leftId}
+                                                disabled={lockRightTo2475 ? c.id !== 'con2475' : c.id === leftId}
                                                 className={c.id === leftId ? "text-gray-300" : ""}
                                             >
                                                 {c.year} - {c.name} {c.id === leftId ? "(เลือกอยู่ฝั่งซ้าย)" : ""}
