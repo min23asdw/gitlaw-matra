@@ -93,8 +93,10 @@ const SemanticBlock = ({
 };
 
 
-const DiffSection = React.memo(({ group, onJumpToPage, forceMobileMode, isExpanded, onToggle }: {
+const DiffSection = React.memo(({ group, leftId, rightId, onJumpToPage, forceMobileMode, isExpanded, onToggle }: {
     group: { id: string; title: string; rows: DisplayRow[] };
+    leftId: string;
+    rightId: string;
     onJumpToPage?: (p: number, s: 'left' | 'right') => void;
     forceMobileMode: boolean;
     isExpanded: boolean;
@@ -227,6 +229,8 @@ const DiffSection = React.memo(({ group, onJumpToPage, forceMobileMode, isExpand
                                 <DiffRowItem
                                     key={row.key}
                                     row={row}
+                                    leftId={leftId}
+                                    rightId={rightId}
                                     onJumpToPage={onJumpToPage}
                                     forceMobileMode={forceMobileMode}
                                 />

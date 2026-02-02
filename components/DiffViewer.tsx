@@ -10,13 +10,15 @@ import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 interface Props {
     leftSections: SectionContent[];
     rightSections: SectionContent[];
+    leftId: string;
+    rightId: string;
     onJumpToPage?: (page: number, side: 'left' | 'right') => void;
     forceMobileMode?: boolean;
     targetCategory?: string | null;
 }
 
 
-function DiffViewerComponent({ leftSections, rightSections, onJumpToPage, forceMobileMode = false, targetCategory }: Props) {
+function DiffViewerComponent({ leftSections, rightSections, leftId, rightId, onJumpToPage, forceMobileMode = false, targetCategory }: Props) {
     const virtuosoRef = React.useRef<VirtuosoHandle>(null);
 
     const rawRows = useMemo(() => alignSections(leftSections, rightSections), [leftSections, rightSections]);
@@ -145,6 +147,8 @@ function DiffViewerComponent({ leftSections, rightSections, onJumpToPage, forceM
                             <DiffSection
                                 key={`${group.id}-${index}`}
                                 group={group}
+                                leftId={leftId}
+                                rightId={rightId}
                                 onJumpToPage={onJumpToPage}
                                 forceMobileMode={forceMobileMode}
                                 isExpanded={!!expandedState[group.title]}
@@ -154,7 +158,7 @@ function DiffViewerComponent({ leftSections, rightSections, onJumpToPage, forceM
                     )}
                 />
             </div>
-        </div>
+            );</div>
     );
 }
 

@@ -170,6 +170,8 @@ function LiquidPDFLayout({ leftData, rightData, leftMeta, rightMeta, headerColla
                     <DiffViewer
                         leftSections={leftData.sections}
                         rightSections={rightData.sections}
+                        leftId={leftMeta?.id || 'unknown'}
+                        rightId={rightMeta?.id || 'unknown'}
                         onJumpToPage={handleJump}
                         forceMobileMode={isContentNarrow}
                         targetCategory={targetCategory}
