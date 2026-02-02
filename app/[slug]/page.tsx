@@ -20,10 +20,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-    let siteUrl =
-        process.env.SITE_URL ??
-        process.env.NEXT_PUBLIC_SITE_URL ??
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.matradiff.org/');
+    let siteUrl = 'https://www.matradiff.org/';
 
     let acceptLanguage: string | null = null;
     try {
